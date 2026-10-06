@@ -1,5 +1,7 @@
 $ErrorActionPreference = 'Stop'
 Set-Location (Split-Path $PSScriptRoot -Parent)
+& node node_modules/electron/install.js
+if ($LASTEXITCODE) { throw 'Electron runtime installation failed' }
 & node node_modules/typescript/bin/tsc --noEmit
 if ($LASTEXITCODE) { throw 'TypeScript validation failed' }
 & node node_modules/vite/bin/vite.js build --configLoader native

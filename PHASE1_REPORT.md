@@ -2,7 +2,7 @@
 
 Date: 2026-10-06. Repository: https://github.com/nzg1818-droid/ResearchOS
 
-Branch: `feat/phase1`. Tested implementation commit: `cbe2d9d84222c243ca953793f78e18a88ee83cac` (the following documentation commit adds this report and CI, without changing application code). Run `git rev-parse HEAD` for the final checkout SHA; the delivery response also records it.
+Branch: `feat/phase1`. Tested application implementation commit: `cbe2d9d84222c243ca953793f78e18a88ee83cac` (subsequent commits add documentation/CI and explicitly install Electron during packaging, without changing application code). Run `git rev-parse HEAD` for the final checkout SHA; the delivery response also records it.
 
 ## Outcome
 
@@ -54,7 +54,7 @@ node node_modules/vite/bin/vite.js build --configLoader native
 ./scripts/build-windows.ps1
 ```
 
-The build script executes PyInstaller with `--collect-all keyring --collect-all pymupdf --add-data 'alembic.ini;.' --add-data 'migrations;migrations'`, then `scripts/package_portable.py`.
+The build script explicitly runs `node node_modules/electron/install.js`, then PyInstaller with `--collect-all keyring --collect-all pymupdf --add-data 'alembic.ini;.' --add-data 'migrations;migrations'`, then `scripts/package_portable.py`. The first clean GitHub CI run passed both test suites but exposed a missing Electron distribution because npm had skipped its install hook. Explicit runtime installation fixes that clean-build prerequisite.
 
 Production npm audit: **0 reported vulnerabilities**. Full build/dev dependency tree: 8 moderate advisories at verification time; no high/critical advisories. The full tree is not shipped in the portable application. Pytest emits one upstream Starlette/httpx deprecation warning; all assertions pass. Vite warns about a large PDF-enabled renderer bundle; build succeeds.
 

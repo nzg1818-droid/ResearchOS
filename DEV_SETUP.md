@@ -12,6 +12,7 @@ Run these PowerShell commands from the repository root:
 py -3.12 -m venv .venv
 .venv\Scripts\python.exe -m pip install -r backend\requirements.lock.txt
 npm ci
+node node_modules/electron/install.js
 npm run build
 npm run desktop
 ```
@@ -55,7 +56,7 @@ Unit tests use HTTP fixtures, a fresh migrated SQLite database and generated PDF
 powershell -File scripts\build-windows.ps1
 ```
 
-This builds the Vite renderer, freezes Python with PyInstaller and assembles the official installed Electron distribution into a Windows runnable folder. Outputs:
+This explicitly installs the official Electron runtime (including when npm lifecycle scripts are disabled), builds the Vite renderer, freezes Python with PyInstaller and assembles a Windows runnable folder. Outputs:
 
 - `release/ResearchOS-portable/ResearchOS.exe`
 - `release/ResearchOS-0.1.0-win-x64.zip`
