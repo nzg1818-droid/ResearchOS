@@ -1,0 +1,46 @@
+{
+  "date": "2026-10-06",
+  "environment": "Windows 11; Vite renderer in Codex browser; frozen Python 3.12 sidecar",
+  "checks": [
+    {
+      "id": 6,
+      "passed": true,
+      "evidence": "Clicked Open DOI in a real NiFe search result; browser opened https://doi.org/10.1038/s41467-024-54754-5. Publisher button uses the same HTTP(S)-only external-link function."
+    },
+    {
+      "id": 8,
+      "passed": true,
+      "evidence": "Downloaded an actual PDF from https://arxiv.org/pdf/1706.03762 to local disk; imported it into the existing Attention Is All You Need Work (selected by title/authors), file_id=1, work_id=52. Unit test independently checks automatic DOI matching."
+    },
+    {
+      "id": 9,
+      "passed": true,
+      "evidence": "Reimport returned file_id=1, work_id=52, duplicate=true."
+    },
+    {
+      "id": 11,
+      "passed": true,
+      "evidence": "Dragged text on real PDF page 2, entered note and tags, saved as evidence. Stopped frozen backend PID 20596, restarted it (PID 30172), reloaded UI; annotation and note remained."
+    },
+    {
+      "id": 12,
+      "passed": true,
+      "evidence": "Clicked Knowledge > Open source page 2 after restart; Reader displayed same PDF at page 2 and the saved note, with focused coordinate overlays."
+    },
+    {
+      "id": 13,
+      "passed": true,
+      "evidence": "Library metadata, PDF, annotation and material survived sidecar process restart; independent fresh-application unit test passed."
+    },
+    {
+      "id": 16,
+      "passed": true,
+      "evidence": "Windows x64 portable ZIP built locally with official Electron and PyInstaller sidecar. Initial sandbox-directory launch blocked by workspace ACL. User extracted to an ordinary directory and explicitly confirmed the executable opens normally."
+    }
+  ],
+  "limitations": [
+    "Native file-picker interaction was not driven inside the restricted Codex environment; import endpoint and native picker implementation are covered separately.",
+    "Desktop launch was user-verified; PDF selection/restart workflow was verified with the same React renderer and frozen backend through browser UI.",
+    "Provider metadata was retained faithfully; the returned OpenAlex edition metadata can differ from the downloaded PDF edition."
+  ]
+}
