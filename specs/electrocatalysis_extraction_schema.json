@@ -1,0 +1,143 @@
+{
+  "title": "ElectrocatalysisPaperExtraction",
+  "type": "object",
+  "required": [
+    "paper",
+    "extraction_level",
+    "materials",
+    "electrochemistry",
+    "claims"
+  ],
+  "properties": {
+    "paper": {
+      "type": "object",
+      "properties": {
+        "doi": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "title": {
+          "type": "string"
+        },
+        "journal": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "year": {
+          "type": [
+            "integer",
+            "null"
+          ]
+        }
+      }
+    },
+    "extraction_level": {
+      "type": "string",
+      "enum": [
+        "metadata",
+        "abstract",
+        "full_text",
+        "full_text_verified"
+      ]
+    },
+    "materials": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "synthesis": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "characterization": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "electrochemistry": {
+      "type": "object",
+      "properties": {
+        "reaction": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "electrolyte": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "koh_concentration": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "temperature_c": {
+          "type": [
+            "number",
+            "null"
+          ]
+        },
+        "reference_electrode": {
+          "type": [
+            "string",
+            "null"
+          ]
+        },
+        "ir_corrected": {
+          "type": [
+            "boolean",
+            "null"
+          ]
+        },
+        "measurements": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          }
+        }
+      }
+    },
+    "mechanism": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    },
+    "novelty": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "limitations": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "future_questions": {
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "claims": {
+      "type": "array",
+      "items": {
+        "type": "object"
+      }
+    }
+  }
+}
