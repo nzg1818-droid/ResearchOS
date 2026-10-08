@@ -57,10 +57,20 @@ def create_app(data_dir=None, token=None):
         return item
 
     def serialize_work(session, w):
+        from .phase2_models import SyncState, RemoteLibrary, ExternalAttachment, RemoteNote
+        from .integrations.zotero.sync import local_value
+        from .integrations.zotero.mapping import fingerprint
         result = columns(w)
         result['files'] = [{k:v for k,v in columns(f).items() if k != 'path'} for f in session.scalars(select(File).where(File.work_id == w.id))]
         result['sources'] = sorted(set(session.scalars(select(SourceHit.source).where(SourceHit.work_id == w.id))))
         result['collections'] = list(session.scalars(select(CollectionWork.collection_id).where(CollectionWork.work_id == w.id)))
+        result['zotero'] = []
+        for state in session.scalars(select(SyncState).where(SyncState.work_id==w.id)):
+            status=state.status
+            if status=='In sync' and fingerprint(local_value(session,session.get(RemoteLibrary,state.library_id),w))!=state.local_fingerprint:status='Local changes'
+            result['zotero'].append({'id':state.id,'library_id':state.library_id,'item_key':state.item_key,'status':status})
+        result['external_attachments']=[columns(a) for a in session.scalars(select(ExternalAttachment).where(ExternalAttachment.work_id==w.id))]
+        result['zotero_notes']=[columns(n) for n in session.scalars(select(RemoteNote).where(RemoteNote.work_id==w.id))]
         return result
 
     def job_update(id, **values):
@@ -180,9 +190,27 @@ def create_app(data_dir=None, token=None):
     def patch_work(id: int, body: LibraryPatch):
         with write_lock, sessions.begin() as s:
             w = required(s, Work, id)
-            for k,v in body.model_dump(exclude_none=True).items(): setattr(w, k, v)
+            values=body.model_dump(exclude_unset=True)
+            if 'doi' in values:
+                from .canonical import doi
+                values['doi']=doi(values['doi'])
+                if values['doi'] and s.scalar(select(Work.id).where(Work.doi==values['doi'],Work.id!=id)):raise HTTPException(409,'DOI belongs to another Work')
+            for k,v in values.items():
+                if v is None and k in ('title','authors','tags','notes','status','in_library','starred'):raise HTTPException(422,'This field cannot be empty')
+                setattr(w,k,v)
             s.flush()
             return serialize_work(s, w)
+
+    @app.post('/works')
+    def create_work(body: LibraryPatch):
+        from .canonical import doi
+        with write_lock,sessions.begin() as s:
+            values=body.model_dump(exclude_none=True)
+            if not values.get('title','').strip():raise HTTPException(422,'Title is required')
+            identifier=doi(values.get('doi'))
+            if identifier and s.scalar(select(Work).where(Work.doi==identifier)):raise HTTPException(409,'DOI already exists in this library')
+            values.update(doi=identifier,in_library=True)
+            work=Work(**values);s.add(work);s.flush();return serialize_work(s,work)
 
     @app.post('/works/{id}/oa')
     async def oa(id: int):
@@ -270,4 +298,6 @@ def create_app(data_dir=None, token=None):
         except keyring.errors.KeyringError: raise HTTPException(503, 'Windows credential store unavailable')
         return {'configured': bool(body.key)}
 
+    from .phase2_api import register
+    register(app,sessions,data,write_lock)
     return app

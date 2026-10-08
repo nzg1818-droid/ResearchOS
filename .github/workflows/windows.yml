@@ -1,4 +1,4 @@
-name: Windows Phase 1 checks
+name: Windows Phase 2A checks
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -31,4 +31,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: ResearchOS-Windows-x64
-          path: release/ResearchOS-0.1.0-win-x64.zip*
+          path: release/ResearchOS-0.2.0-win-x64.zip*

@@ -9,7 +9,8 @@ import shutil
 import hashlib
 
 root=Path(__file__).resolve().parents[1]
-out=root/'release'/'ResearchOS-portable'
+metadata=json.loads((root/'package.json').read_text(encoding='utf-8'))
+out=root/'release'/('ResearchOS-'+metadata['version']+'-portable')
 electron=root/'node_modules'/'electron'/'dist'
 backend=root/'backend'/'dist'/'researchos-backend'
 assert (root/'dist'/'index.html').is_file(), 'Build frontend first'
@@ -24,7 +25,7 @@ metadata=json.loads((root/'package.json').read_text())
 shutil.copytree(backend,out/'resources'/'backend',dirs_exist_ok=True)
 source=out/'electron.exe';target=out/'ResearchOS.exe'
 source.replace(target)
-archive=shutil.make_archive(str(root/'release'/'ResearchOS-0.1.0-win-x64'),'zip',out.parent,out.name)
+archive=shutil.make_archive(str(root/'release'/('ResearchOS-'+metadata['version']+'-win-x64')),'zip',out.parent,out.name)
 digest=hashlib.sha256(Path(archive).read_bytes()).hexdigest()
 Path(archive+'.sha256').write_text(digest+'  '+Path(archive).name+'\n')
 print(archive)

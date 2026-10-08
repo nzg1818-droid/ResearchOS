@@ -37,8 +37,9 @@ def test_phase1_migration_and_move_preserves_backlinks(tmp_path):
         assert s.get(Work,1).notes=='Keep note'
     engine.dispose()
     moved=tmp_path/'moved';shutil.copytree(root,moved)
-    # The old folder is deliberately absent to expose any absolute-path fallback.
-    root.rename(tmp_path/'old-unavailable')
+    # The old managed PDF is absent to expose any absolute-path fallback. Avoid
+    # directory rename races with Windows antivirus scanning SQLite sidecars.
+    managed.unlink()
     with TestClient(create_app(moved,'t'),headers={'X-ResearchOS-Token':'t'}) as c:
         assert c.get('/files/1/content').content==source.read_bytes()
         material=c.get('/materials').json()[0]
