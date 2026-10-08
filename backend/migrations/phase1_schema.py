@@ -18,8 +18,6 @@ class Work(Base):
     id: Mapped[int] = mapped_column(primary_key=True)
     doi: Mapped[str | None] = mapped_column(String, unique=True)
     title: Mapped[str] = mapped_column(Text)
-    title_key: Mapped[str] = mapped_column(default='')
-    author_key: Mapped[str] = mapped_column(default='')
     authors: Mapped[list] = mapped_column(JSON, default=list)
     year: Mapped[int | None]
     publication_date: Mapped[str | None]
@@ -46,7 +44,6 @@ class SourceHit(Base):
     work_id: Mapped[int] = mapped_column(ForeignKey('works.id'))
     source: Mapped[str]
     raw: Mapped[dict] = mapped_column(JSON)
-    snapshot_hash: Mapped[str | None] = mapped_column(index=True)
     retrieved_at: Mapped[str] = mapped_column(default=now)
 
 class File(Base):
@@ -79,8 +76,6 @@ class Annotation(Base):
     page: Mapped[int]
     text: Mapped[str] = mapped_column(Text)
     context: Mapped[str] = mapped_column(Text, default='')
-    context_before: Mapped[str] = mapped_column(Text, default='')
-    context_after: Mapped[str] = mapped_column(Text, default='')
     rects: Mapped[list] = mapped_column(JSON, default=list)
     note: Mapped[str] = mapped_column(Text, default='')
     tags: Mapped[list] = mapped_column(JSON, default=list)
@@ -105,46 +100,3 @@ class Job(Base):
     progress: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[str] = mapped_column(default=now)
 
-def initialize(data: Path):
-    from . import phase2_models
-    import sqlite3
-    from contextlib import closing
-    data = data.resolve()
-    data.mkdir(parents=True, exist_ok=True)
-    (data / 'files').mkdir(exist_ok=True)
-    database = data / 'researchos.db'
-    if database.exists():
-        with closing(sqlite3.connect(database)) as old:
-            version = old.execute("SELECT version_num FROM alembic_version").fetchone()
-            if version and version[0] == '0001':
-                backup = data / 'migration-backups' / (now().replace(':','-') + '-0001.db')
-                backup.parent.mkdir(exist_ok=True)
-                with closing(sqlite3.connect(backup)) as target: old.backup(target)
-    engine = create_engine('sqlite:///' + (data / 'researchos.db').as_posix(), connect_args={'check_same_thread': False, 'timeout': 30})
-    @event.listens_for(engine, 'connect')
-    def pragmas(conn, _):
-        conn.execute('PRAGMA foreign_keys=ON')
-        conn.execute('PRAGMA journal_mode=WAL')
-    root = Path(getattr(sys, '_MEIPASS', Path(__file__).resolve().parents[1]))
-    cfg = Config(str(root / 'alembic.ini'))
-    cfg.set_main_option('script_location', str(root / 'migrations'))
-    cfg.attributes['data_root'] = str(data)
-    with engine.begin() as conn:
-        cfg.attributes['connection'] = conn
-        command.upgrade(cfg, 'head')
-    factory = sessionmaker(engine, expire_on_commit=False)
-    with factory.begin() as session:
-        for job in session.query(Job).filter(Job.state.in_(['running', 'queued'])):
-            job.state = 'interrupted'
-            job.error = 'Application stopped. Retry to resume safely; completed imports are deduplicated.'
-    return engine, factory
-
-def columns(obj):
-    return {c.name: getattr(obj, c.name) for c in obj.__table__.columns}
-
-@event.listens_for(Work, 'before_insert')
-@event.listens_for(Work, 'before_update')
-def index_identity(mapper, connection, work):
-    from .textutils import normalized
-    work.title_key = normalized(work.title)
-    work.author_key = normalized(work.authors[0]) if work.authors else ''

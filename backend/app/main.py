@@ -17,6 +17,10 @@ from .schemas import Search, LibraryPatch, ImportRequest, AnnotationInput
 from .canonical import upsert
 from .adapters import federated
 from .importer import import_pdf
+from .storage import Storage
+from .textutils import local_context
+from .phase2_models import SearchRun, SearchRunHit
+from .db import now
 
 def create_app(data_dir=None, token=None):
     data = Path(data_dir or os.environ.get('RESEARCHOS_DATA_DIR') or Path(os.getenv('LOCALAPPDATA', Path.home())) / 'ResearchOS')
@@ -53,10 +57,20 @@ def create_app(data_dir=None, token=None):
         return item
 
     def serialize_work(session, w):
+        from .phase2_models import SyncState, RemoteLibrary, ExternalAttachment, RemoteNote
+        from .integrations.zotero.sync import local_value
+        from .integrations.zotero.mapping import fingerprint
         result = columns(w)
         result['files'] = [{k:v for k,v in columns(f).items() if k != 'path'} for f in session.scalars(select(File).where(File.work_id == w.id))]
         result['sources'] = sorted(set(session.scalars(select(SourceHit.source).where(SourceHit.work_id == w.id))))
         result['collections'] = list(session.scalars(select(CollectionWork.collection_id).where(CollectionWork.work_id == w.id)))
+        result['zotero'] = []
+        for state in session.scalars(select(SyncState).where(SyncState.work_id==w.id)):
+            status=state.status
+            if status=='In sync' and fingerprint(local_value(session,session.get(RemoteLibrary,state.library_id),w))!=state.local_fingerprint:status='Local changes'
+            result['zotero'].append({'id':state.id,'library_id':state.library_id,'item_key':state.item_key,'status':status})
+        result['external_attachments']=[columns(a) for a in session.scalars(select(ExternalAttachment).where(ExternalAttachment.work_id==w.id))]
+        result['zotero_notes']=[columns(n) for n in session.scalars(select(RemoteNote).where(RemoteNote.work_id==w.id))]
         return result
 
     def job_update(id, **values):
@@ -88,7 +102,9 @@ def create_app(data_dir=None, token=None):
             if kind == 'search':
                 hits, errors, counts = await federated(Search(**payload))
                 with write_lock, sessions.begin() as s:
-                    ids = list(dict.fromkeys(upsert(s, hit).id for hit in hits))
+                    run = SearchRun(job_id=id,query=payload['query'],mode=payload['mode'],filters={k:payload.get(k) for k in ('start','end','limit')},sources=payload['sources'],errors=errors,finished_at=now())
+                    s.add(run); s.flush()
+                    ids = list(dict.fromkeys(upsert(s, hit, run).id for hit in hits))
                     surviving = set(s.scalars(select(Work.id).where(Work.id.in_(ids))))
                     ids = [id for id in ids if id in surviving]
                 result = {'work_ids': ids, 'errors': errors, 'source_counts': counts}
@@ -117,7 +133,12 @@ def create_app(data_dir=None, token=None):
         return {'job_id': id}
 
     @app.get('/health')
-    def health(): return {'status': 'ok', 'version': '0.1.0', 'data_dir': str(data)}
+    def health(): return {'status': 'ok', 'version': '0.2.0', 'data_dir': str(data)}
+
+    @app.get('/search-runs')
+    def search_runs():
+        with sessions() as s:
+            return [{**columns(r),'hits':[columns(h) for h in s.scalars(select(SearchRunHit).where(SearchRunHit.run_id==r.id))]} for r in s.scalars(select(SearchRun).order_by(SearchRun.id.desc()).limit(100))]
 
     @app.post('/search')
     async def search(body: Search): return submit('search', body.model_dump(mode='json'))
@@ -169,9 +190,27 @@ def create_app(data_dir=None, token=None):
     def patch_work(id: int, body: LibraryPatch):
         with write_lock, sessions.begin() as s:
             w = required(s, Work, id)
-            for k,v in body.model_dump(exclude_none=True).items(): setattr(w, k, v)
+            values=body.model_dump(exclude_unset=True)
+            if 'doi' in values:
+                from .canonical import doi
+                values['doi']=doi(values['doi'])
+                if values['doi'] and s.scalar(select(Work.id).where(Work.doi==values['doi'],Work.id!=id)):raise HTTPException(409,'DOI belongs to another Work')
+            for k,v in values.items():
+                if v is None and k in ('title','authors','tags','notes','status','in_library','starred'):raise HTTPException(422,'This field cannot be empty')
+                setattr(w,k,v)
             s.flush()
             return serialize_work(s, w)
+
+    @app.post('/works')
+    def create_work(body: LibraryPatch):
+        from .canonical import doi
+        with write_lock,sessions.begin() as s:
+            values=body.model_dump(exclude_none=True)
+            if not values.get('title','').strip():raise HTTPException(422,'Title is required')
+            identifier=doi(values.get('doi'))
+            if identifier and s.scalar(select(Work).where(Work.doi==identifier)):raise HTTPException(409,'DOI already exists in this library')
+            values.update(doi=identifier,in_library=True)
+            work=Work(**values);s.add(work);s.flush();return serialize_work(s,work)
 
     @app.post('/works/{id}/oa')
     async def oa(id: int):
@@ -218,8 +257,9 @@ def create_app(data_dir=None, token=None):
     def content(id: int):
         with sessions() as s:
             f = required(s, File, id)
-            if not Path(f.path).is_file(): raise HTTPException(404, 'Managed PDF is missing')
-            return FileResponse(f.path, media_type='application/pdf')
+            path = Storage(data).resolve(f.path)
+            if not path.is_file(): raise HTTPException(404, 'Managed PDF is missing')
+            return FileResponse(path, media_type='application/pdf')
 
     @app.get('/files/{id}/annotations')
     def annotations(id: int):
@@ -231,7 +271,10 @@ def create_app(data_dir=None, token=None):
             f = required(s, File, body.file_id)
             if body.page > f.pages: raise HTTPException(422, 'Page is outside this PDF')
             w = required(s, Work, f.work_id)
-            a = Annotation(work_id=w.id, **body.model_dump(exclude={'kind'}))
+            values = body.model_dump(exclude={'kind'})
+            context = local_context(body.context,body.text)
+            values.update(context=context['context'],context_before=context['before'],context_after=context['after'])
+            a = Annotation(work_id=w.id, **values)
             s.add(a); s.flush()
             if body.kind != 'highlight':
                 s.add(Material(annotation_id=a.id, kind=body.kind, provenance={'work_id': w.id, 'title': w.title, 'doi': w.doi, 'authors': w.authors, 'year': w.year, 'file_id': f.id, 'sha256': f.sha256, 'filename': f.name, 'page': a.page, 'text': a.text, 'context': a.context, 'rects': a.rects, 'note': a.note, 'tags': a.tags, 'timestamp': a.created_at}))
@@ -255,4 +298,6 @@ def create_app(data_dir=None, token=None):
         except keyring.errors.KeyringError: raise HTTPException(503, 'Windows credential store unavailable')
         return {'configured': bool(body.key)}
 
+    from .phase2_api import register
+    register(app,sessions,data,write_lock)
     return app

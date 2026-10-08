@@ -32,6 +32,13 @@ class Hit(BaseModel):
     raw: dict = Field(default_factory=dict)
 
 class LibraryPatch(BaseModel):
+    title: str | None = Field(default=None,min_length=1)
+    authors: list[str] | None = None
+    doi: str | None = None
+    journal: str | None = None
+    year: int | None = None
+    publication_date: str | None = None
+    publisher_url: str | None = None
     in_library: bool | None = None
     starred: bool | None = None
     status: Literal['unread', 'reading', 'completed'] | None = None

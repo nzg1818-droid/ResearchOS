@@ -1,10 +1,11 @@
-import { useCallback, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useEffect, useState } from "react";
 import {
   Alert,
   Box,
   Button,
   Card,
   CardContent,
+  Checkbox,
   Chip,
   Dialog,
   DialogActions,
@@ -17,19 +18,43 @@ import {
   TextField,
   Typography,
 } from "@mui/material";
+import Zotero from "./Zotero";
+import StorageSettings from "./StorageSettings";
+import ExportButton from "./ExportButton";
 import { api, openLink } from "./api";
-import Reader from "./Reader";
+const Reader = lazy(() => import("./Reader"));
 import type { Attachment, Job, Location, Material, Work } from "./types";
 const sections = [
   "Search",
   "Library",
   "Reader",
   "Knowledge",
+  "Zotero",
   "Tasks",
   "Settings",
 ];
 type Collection = { id: number; name: string };
 export default function App() {
+  const [newPaper, setNewPaper] = useState<string | null>(null);
+  const [sort, setSort] = useState("default");
+  const [knowledgeFilter, setKnowledgeFilter] = useState("");
+  const [filters, setFilters] = useState(
+    () => localStorage.getItem("researchos.library.filters") !== "false",
+  );
+  const [sources, setSources] = useState(["openalex", "crossref"]);
+  const [checked, setChecked] = useState<number[]>([]);
+  const [palette, setPalette] = useState(false);
+  const [paletteQuery, setPaletteQuery] = useState("");
+  useEffect(() => {
+    const listener = (e: KeyboardEvent) => {
+      if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "k") {
+        e.preventDefault();
+        setPalette((p) => !p);
+      }
+    };
+    window.addEventListener("keydown", listener);
+    return () => window.removeEventListener("keydown", listener);
+  }, []);
   const [view, setView] = useState("Search"),
     [query, setQuery] = useState("NiFe LDH alkaline water electrolysis"),
     [mode, setMode] = useState("keyword"),
@@ -56,6 +81,14 @@ export default function App() {
     [apiKey, setAPIKey] = useState(""),
     [dataDir, setDataDir] = useState(""),
     [oaBusy, setOABusy] = useState(false);
+  useEffect(() => {
+    localStorage.setItem("researchos.library.filters", String(filters));
+  }, [filters]);
+  useEffect(() => {
+    const navigate = () => setView("Zotero");
+    window.addEventListener("open-zotero", navigate);
+    return () => window.removeEventListener("open-zotero", navigate);
+  }, []);
   const fail = (e: unknown) =>
     setError(e instanceof Error ? e.message : String(e));
   const refresh = useCallback(async () => {
@@ -122,6 +155,7 @@ export default function App() {
     try {
       const j = await api<{ job_id: number }>("/search", "POST", {
         query,
+        sources,
         mode,
         start: start || null,
         end: end || null,
@@ -205,45 +239,102 @@ export default function App() {
   const running = jobs.filter((j) => ["queued", "running"].includes(j.state));
   return (
     <div className="app-shell">
-      <nav className="sidebar">
-        <div className="brand">
-          <span className="brand-symbol">R</span>
-          <div>
-            <strong>ResearchOS</strong>
-            <small>YOUR RESEARCH, CONNECTED</small>
-          </div>
+      <nav className="app-navigation" aria-label="Application navigation">
+        <strong>ResearchOS</strong>
+        <div className="nav-destinations">
+          {sections.map((s, i) => (
+            <button
+              key={s}
+              className={`nav-item ${view === s ? "active" : ""}`}
+              onClick={() => setView(s)}
+            >
+              <span className="nav-number">0{i + 1}</span>
+              {s}
+            </button>
+          ))}
         </div>
-        <div className="workspace-label">WORKSPACE</div>
-        {sections.map((s, i) => (
-          <button
-            key={s}
-            className={`nav-item ${view === s ? "active" : ""}`}
-            onClick={() => {
-              setView(s);
-              setError("");
-            }}
-          >
-            <span className="nav-number">0{i + 1}</span>
-            {s}
-            {s === "Tasks" && running.length > 0 && (
-              <Chip size="small" label={running.length} />
-            )}
-          </button>
-        ))}
-        <div className="sidebar-foot">
-          <span className="status-dot" />
-          Local-first workspace
-          <small>Phase 1 · Evidence stays with its source</small>
-        </div>
+        <select
+          className="nav-overflow"
+          aria-label="Destination"
+          value={view}
+          onChange={(e) => setView(e.target.value)}
+        >
+          {sections.map((s) => (
+            <option key={s}>{s}</option>
+          ))}
+        </select>
+        <span className="nav-spacer" />
+        <Button size="small" onClick={() => setView("Tasks")}>
+          {running.length ? `${running.length} running` : "Tasks idle"}
+        </Button>
+        <Chip size="small" label="Local library" />
+        <Button aria-label="Command palette" onClick={() => setPalette(true)}>
+          Ctrl+K
+        </Button>
       </nav>
+      <Dialog open={palette} onClose={() => setPalette(false)} fullWidth>
+        <DialogTitle>Command palette</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Find command"
+            value={paletteQuery}
+            onChange={(e) => setPaletteQuery(e.target.value)}
+          />
+          {[
+            ["Search literature", () => setView("Search")],
+            ["Open Library", () => setView("Library")],
+            ["Import PDFs", () => void importFiles()],
+            ["Import folder", () => void importFiles(true)],
+            ["Open Reader", () => setView("Reader")],
+            [
+              "Toggle left reader panel",
+              () =>
+                window.dispatchEvent(
+                  new CustomEvent("reader-command", { detail: "left" }),
+                ),
+            ],
+            [
+              "Toggle right reader panel",
+              () =>
+                window.dispatchEvent(
+                  new CustomEvent("reader-command", { detail: "right" }),
+                ),
+            ],
+            [
+              "Focus mode",
+              () =>
+                window.dispatchEvent(
+                  new CustomEvent("reader-command", { detail: "focus" }),
+                ),
+            ],
+            ["Zotero sync", () => setView("Zotero")],
+            ["Backup library", () => setView("Settings")],
+          ]
+            .filter(([label]) =>
+              String(label).toLowerCase().includes(paletteQuery.toLowerCase()),
+            )
+            .map(([label, action]) => (
+              <Button
+                fullWidth
+                key={String(label)}
+                onClick={() => {
+                  (action as () => void)();
+                  setPalette(false);
+                }}
+              >
+                {String(label)}
+              </Button>
+            ))}
+        </DialogContent>
+      </Dialog>
       <main>
-        <header className="topbar">
-          <span>
-            Research workspace <span className="slash">/</span> {view}
-          </span>
-          <Chip variant="outlined" size="small" label="LOCAL LIBRARY" />
-        </header>
-        <div className="page-content">
+        <div
+          className={
+            view === "Reader" ? "page-content reader-content" : "page-content"
+          }
+        >
           {error && (
             <Alert
               severity="error"
@@ -318,6 +409,24 @@ export default function App() {
                       Search
                     </Button>
                   </Stack>
+                  <Stack direction="row" gap={1} mt={2}>
+                    {["openalex", "crossref"].map((source) => (
+                      <Chip
+                        key={source}
+                        label={source}
+                        color={sources.includes(source) ? "primary" : "default"}
+                        onClick={() =>
+                          setSources((s) =>
+                            s.includes(source)
+                              ? s.length > 1
+                                ? s.filter((x) => x !== source)
+                                : s
+                              : [...s, source],
+                          )
+                        }
+                      />
+                    ))}
+                  </Stack>
                   <Stack direction="row" gap={2} mt={2} alignItems="center">
                     <TextField
                       size="small"
@@ -379,37 +488,45 @@ export default function App() {
                   </Button>
                 </Stack>
               </div>
-              <Stack direction="row" gap={2} sx={{ mb: 3 }}>
-                <TextField
-                  label="Search local titles and notes"
-                  size="small"
-                  value={localQuery}
-                  onChange={(e) => setLocalQuery(e.target.value)}
-                  sx={{ flex: 1 }}
-                />
-                <TextField
-                  label="Collection"
-                  select
-                  size="small"
-                  value={collection}
-                  onChange={(e) => setCollection(e.target.value)}
-                  sx={{ minWidth: 180 }}
-                >
-                  <MenuItem value="">All collections</MenuItem>
-                  {collections.map((c) => (
-                    <MenuItem key={c.id} value={c.id}>
-                      {c.name}
-                    </MenuItem>
-                  ))}
-                </TextField>
-                <TextField
-                  size="small"
-                  label="New collection"
-                  value={newCollection}
-                  onChange={(e) => setNewCollection(e.target.value)}
-                />
-                <Button onClick={addCollection}>Create</Button>
-              </Stack>
+              <Button
+                aria-expanded={filters}
+                onClick={() => setFilters(!filters)}
+              >
+                Collections & filters
+              </Button>
+              {filters && (
+                <Stack direction="row" gap={2} sx={{ mb: 3 }}>
+                  <TextField
+                    label="Search local titles and notes"
+                    size="small"
+                    value={localQuery}
+                    onChange={(e) => setLocalQuery(e.target.value)}
+                    sx={{ flex: 1 }}
+                  />
+                  <TextField
+                    label="Collection"
+                    select
+                    size="small"
+                    value={collection}
+                    onChange={(e) => setCollection(e.target.value)}
+                    sx={{ minWidth: 180 }}
+                  >
+                    <MenuItem value="">All collections</MenuItem>
+                    {collections.map((c) => (
+                      <MenuItem key={c.id} value={c.id}>
+                        {c.name}
+                      </MenuItem>
+                    ))}
+                  </TextField>
+                  <TextField
+                    size="small"
+                    label="New collection"
+                    value={newCollection}
+                    onChange={(e) => setNewCollection(e.target.value)}
+                  />
+                  <Button onClick={addCollection}>Create</Button>
+                </Stack>
+              )}
               {!works.length && (
                 <div className="empty-state">
                   Save search results or import PDFs to start your library.
@@ -417,120 +534,194 @@ export default function App() {
               )}
             </>
           )}
+          {view === "Library" && (
+            <Stack direction="row" gap={2} mb={2}>
+              <ExportButton
+                workIds={checked.length ? checked : undefined}
+                collectionId={collection ? Number(collection) : undefined}
+              />
+              <Button onClick={() => setView("Zotero")}>
+                Push selected to Zotero
+              </Button>
+              <Button onClick={() => setNewPaper("")}>New paper</Button>
+            </Stack>
+          )}
+          {["Search", "Library"].includes(view) && (
+            <TextField
+              select
+              size="small"
+              label="Sort papers"
+              value={sort}
+              onChange={(e) => setSort(e.target.value)}
+              sx={{ mb: 2, minWidth: 180 }}
+            >
+              {["default", "title", "year", "citations"].map((x) => (
+                <MenuItem key={x} value={x}>
+                  {x}
+                </MenuItem>
+              ))}
+            </TextField>
+          )}
           {["Search", "Library"].includes(view) &&
-            works.map((w) => (
-              <Card key={w.id} variant="outlined" className="work-card">
-                <CardContent>
-                  <div className="work-heading">
-                    <div>
-                      <Stack direction="row" gap={1} mb={1}>
-                        {w.sources.map((s) => (
+            [...works]
+              .sort((a, b) =>
+                sort === "title"
+                  ? a.title.localeCompare(b.title)
+                  : sort === "year"
+                    ? (b.year || 0) - (a.year || 0)
+                    : sort === "citations"
+                      ? (b.citations || 0) - (a.citations || 0)
+                      : 0,
+              )
+              .map((w) => (
+                <Card key={w.id} variant="outlined" className="work-card">
+                  <CardContent>
+                    <div className="work-heading">
+                      {view === "Library" && (
+                        <Checkbox
+                          inputProps={{ "aria-label": `Select ${w.title}` }}
+                          checked={checked.includes(w.id)}
+                          onChange={(e) =>
+                            setChecked(
+                              e.target.checked
+                                ? [...checked, w.id]
+                                : checked.filter((id) => id !== w.id),
+                            )
+                          }
+                        />
+                      )}
+                      <div>
+                        <Stack direction="row" gap={1} mb={1}>
                           <Chip
-                            key={s}
                             size="small"
-                            variant="outlined"
-                            label={s}
+                            label={`#${w.id} · ${w.zotero?.map((z) => z.status).join(", ") || "Not linked"}`}
                           />
-                        ))}
-                        {w.oa_locations.length > 0 && (
                           <Chip
                             size="small"
-                            color="success"
-                            label="Open access"
+                            label={
+                              w.files.length
+                                ? `${w.files.length} managed PDF`
+                                : w.external_attachments?.length
+                                  ? "External Zotero PDF"
+                                  : "No PDF"
+                            }
                           />
-                        )}
-                        <Typography variant="body2" color="text.secondary">
-                          {w.year || "Year unknown"} · {w.citations ?? "—"}{" "}
-                          citations
+                          {w.sources.map((s) => (
+                            <Chip
+                              key={s}
+                              size="small"
+                              variant="outlined"
+                              label={s}
+                            />
+                          ))}
+                          {w.oa_locations.length > 0 && (
+                            <Chip
+                              size="small"
+                              color="success"
+                              label="Open access"
+                            />
+                          )}
+                          <Typography variant="body2" color="text.secondary">
+                            {w.year || "Year unknown"} · {w.citations ?? "—"}{" "}
+                            citations
+                          </Typography>
+                        </Stack>
+                        <Typography
+                          variant="h6"
+                          component="button"
+                          className="title-button"
+                          onClick={() => setSelected(w)}
+                        >
+                          {w.title}
                         </Typography>
-                      </Stack>
-                      <Typography
-                        variant="h6"
-                        component="button"
-                        className="title-button"
-                        onClick={() => setSelected(w)}
+                        <Typography variant="body2" color="text.secondary">
+                          {w.authors.slice(0, 4).join(", ")}
+                          {w.authors.length > 4 ? " et al." : ""}
+                        </Typography>
+                        <Typography
+                          variant="body2"
+                          color="text.secondary"
+                          sx={{ mt: 0.5 }}
+                        >
+                          {w.journal || "Source unknown"}{" "}
+                          {w.doi && `· ${w.doi}`}
+                        </Typography>
+                      </div>
+                      <Button
+                        aria-label={w.starred ? "Unstar paper" : "Star paper"}
+                        onClick={() => patch(w, { starred: !w.starred })}
                       >
-                        {w.title}
-                      </Typography>
-                      <Typography variant="body2" color="text.secondary">
-                        {w.authors.slice(0, 4).join(", ")}
-                        {w.authors.length > 4 ? " et al." : ""}
-                      </Typography>
-                      <Typography
-                        variant="body2"
-                        color="text.secondary"
-                        sx={{ mt: 0.5 }}
-                      >
-                        {w.journal || "Source unknown"} {w.doi && `· ${w.doi}`}
-                      </Typography>
+                        {w.starred ? "★" : "☆"}
+                      </Button>
                     </div>
-                    <Button
-                      aria-label={w.starred ? "Unstar paper" : "Star paper"}
-                      onClick={() => patch(w, { starred: !w.starred })}
-                    >
-                      {w.starred ? "★" : "☆"}
-                    </Button>
-                  </div>
-                  <Stack direction="row" flexWrap="wrap" gap={1} mt={2}>
-                    <Button
-                      size="small"
-                      variant={w.in_library ? "outlined" : "contained"}
-                      onClick={() => patch(w, { in_library: !w.in_library })}
-                    >
-                      {w.in_library ? "Remove from Library" : "Save to Library"}
-                    </Button>
-                    <Button
-                      size="small"
-                      disabled={!w.doi}
-                      onClick={() => link("https://doi.org/" + w.doi)}
-                    >
-                      Open DOI
-                    </Button>
-                    <Button
-                      size="small"
-                      disabled={!w.publisher_url}
-                      onClick={() => link(w.publisher_url!)}
-                    >
-                      Open publisher
-                    </Button>
-                    <Button
-                      size="small"
-                      disabled={oaBusy}
-                      onClick={() => discover(w)}
-                    >
-                      Find OA copy
-                    </Button>
-                    <Button size="small" onClick={() => importFiles(false, w)}>
-                      Attach PDF
-                    </Button>
-                    {w.files.map((f) => (
+                    <Stack direction="row" flexWrap="wrap" gap={1} mt={2}>
                       <Button
                         size="small"
-                        key={f.id}
-                        onClick={() => openFile(f)}
+                        variant={w.in_library ? "outlined" : "contained"}
+                        onClick={() => patch(w, { in_library: !w.in_library })}
                       >
-                        Read PDF · {f.pages}p
+                        {w.in_library
+                          ? "Remove from Library"
+                          : "Save to Library"}
                       </Button>
-                    ))}
-                    <Button size="small" onClick={() => setSelected(w)}>
-                      Details & notes
-                    </Button>
-                  </Stack>
-                </CardContent>
-              </Card>
-            ))}
+                      <Button
+                        size="small"
+                        disabled={!w.doi}
+                        onClick={() => link("https://doi.org/" + w.doi)}
+                      >
+                        Open DOI
+                      </Button>
+                      <Button
+                        size="small"
+                        disabled={!w.publisher_url}
+                        onClick={() => link(w.publisher_url!)}
+                      >
+                        Open publisher
+                      </Button>
+                      <Button
+                        size="small"
+                        disabled={oaBusy}
+                        onClick={() => discover(w)}
+                      >
+                        Find OA copy
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => importFiles(false, w)}
+                      >
+                        Attach PDF
+                      </Button>
+                      {w.files.map((f) => (
+                        <Button
+                          size="small"
+                          key={f.id}
+                          onClick={() => openFile(f)}
+                        >
+                          Read PDF · {f.pages}p
+                        </Button>
+                      ))}
+                      <Button size="small" onClick={() => setSelected(w)}>
+                        Details & notes
+                      </Button>
+                    </Stack>
+                  </CardContent>
+                </Card>
+              ))}
           {view === "Reader" &&
             (reader ? (
-              <Reader
-                key={`${reader.file.id}-${reader.page}-${reader.focusId}`}
-                {...reader}
-                file={reader.file}
-                initialPage={reader.page}
-                onSaved={() => {
-                  void refresh();
-                  setMessage("Annotation saved to local library");
-                }}
-              />
+              <Suspense fallback={<LinearProgress />}>
+                <Reader
+                  key={`${reader.file.id}-${reader.page}-${reader.focusId}`}
+                  {...reader}
+                  file={reader.file}
+                  initialPage={reader.page}
+                  onBack={() => setView("Library")}
+                  onSaved={() => {
+                    void refresh();
+                    setMessage("Annotation saved to local library");
+                  }}
+                />
+              </Suspense>
             ) : (
               <div className="empty-state">
                 <Typography variant="h4">
@@ -564,38 +755,52 @@ export default function App() {
                   material.
                 </div>
               )}
+              <TextField
+                fullWidth
+                label="Filter materials by type, tag or paper"
+                value={knowledgeFilter}
+                onChange={(e) => setKnowledgeFilter(e.target.value)}
+                sx={{ mb: 2 }}
+              />
               <div className="material-grid">
-                {materials.map((m) => (
-                  <Card key={m.id} variant="outlined">
-                    <CardContent>
-                      <Chip size="small" label={m.kind} />
-                      <blockquote>{m.annotation.text}</blockquote>
-                      <Typography variant="body2">
-                        {m.annotation.note}
-                      </Typography>
-                      <Divider sx={{ my: 2 }} />
-                      <Typography variant="subtitle2">
-                        {m.provenance.title}
-                      </Typography>
-                      <Typography variant="caption" color="text.secondary">
-                        {m.provenance.authors.slice(0, 2).join(", ")} ·{" "}
-                        {m.provenance.year || "Unknown year"} · p.{" "}
-                        {m.annotation.page}
-                      </Typography>
-                      <Typography variant="caption" display="block">
-                        {m.provenance.doi}
-                      </Typography>
-                      <Stack direction="row" gap={1} mt={1}>
-                        {m.annotation.tags.map((t) => (
-                          <Chip size="small" key={t} label={t} />
-                        ))}
-                      </Stack>
-                      <Button sx={{ mt: 2 }} onClick={() => backlink(m)}>
-                        Open source · page {m.annotation.page}
-                      </Button>
-                    </CardContent>
-                  </Card>
-                ))}
+                {materials
+                  .filter((m) =>
+                    [m.kind, m.provenance.title, ...m.annotation.tags]
+                      .join(" ")
+                      .toLowerCase()
+                      .includes(knowledgeFilter.toLowerCase()),
+                  )
+                  .map((m) => (
+                    <Card key={m.id} variant="outlined">
+                      <CardContent>
+                        <Chip size="small" label={m.kind} />
+                        <blockquote>{m.annotation.text}</blockquote>
+                        <Typography variant="body2">
+                          {m.annotation.note}
+                        </Typography>
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="subtitle2">
+                          {m.provenance.title}
+                        </Typography>
+                        <Typography variant="caption" color="text.secondary">
+                          {m.provenance.authors.slice(0, 2).join(", ")} ·{" "}
+                          {m.provenance.year || "Unknown year"} · p.{" "}
+                          {m.annotation.page}
+                        </Typography>
+                        <Typography variant="caption" display="block">
+                          {m.provenance.doi}
+                        </Typography>
+                        <Stack direction="row" gap={1} mt={1}>
+                          {m.annotation.tags.map((t) => (
+                            <Chip size="small" key={t} label={t} />
+                          ))}
+                        </Stack>
+                        <Button sx={{ mt: 2 }} onClick={() => backlink(m)}>
+                          Open source · page {m.annotation.page}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  ))}
               </div>
             </>
           )}
@@ -679,6 +884,7 @@ export default function App() {
               )}
             </>
           )}
+          {view === "Zotero" && <Zotero initialWorkIds={checked} />}
           {view === "Settings" && (
             <>
               <div className="page-title">
@@ -687,6 +893,7 @@ export default function App() {
                   <Typography variant="h4">Settings & storage</Typography>
                 </div>
               </div>
+              <StorageSettings />
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="h6">OpenAlex access</Typography>
@@ -740,6 +947,39 @@ export default function App() {
         </div>
       </main>
       <Dialog
+        open={newPaper !== null}
+        onClose={() => setNewPaper(null)}
+        fullWidth
+      >
+        <DialogTitle>New paper</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            fullWidth
+            label="Paper title"
+            value={newPaper || ""}
+            onChange={(e) => setNewPaper(e.target.value)}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setNewPaper(null)}>Cancel</Button>
+          <Button
+            disabled={!newPaper?.trim()}
+            onClick={async () => {
+              try {
+                await api("/works", "POST", { title: newPaper });
+                setNewPaper(null);
+                await refresh();
+              } catch (e) {
+                fail(e);
+              }
+            }}
+          >
+            Create paper
+          </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
         open={!!selected}
         onClose={() => setSelected(null)}
         maxWidth="md"
@@ -749,7 +989,84 @@ export default function App() {
         <DialogContent>
           {selected && (
             <Stack gap={2} pt={1}>
-              <Typography>{selected.doi}</Typography>
+              <ExportButton workIds={[selected.id]} />
+              <TextField
+                label="Title"
+                value={selected.title}
+                onChange={(e) =>
+                  setSelected({ ...selected, title: e.target.value })
+                }
+              />
+              <TextField
+                label="Authors (semicolon separated)"
+                value={selected.authors.join("; ")}
+                onChange={(e) =>
+                  setSelected({
+                    ...selected,
+                    authors: e.target.value.split(";").map((a) => a.trim()),
+                  })
+                }
+              />
+              <TextField
+                label="DOI"
+                value={selected.doi || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, doi: e.target.value })
+                }
+              />
+              <TextField
+                label="Journal"
+                value={selected.journal || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, journal: e.target.value })
+                }
+              />
+              <TextField
+                label="Publication date"
+                value={selected.publication_date || ""}
+                onChange={(e) =>
+                  setSelected({ ...selected, publication_date: e.target.value })
+                }
+              />
+              <TextField
+                label="Year"
+                type="number"
+                value={selected.year || ""}
+                onChange={(e) =>
+                  setSelected({
+                    ...selected,
+                    year: Number(e.target.value) || null,
+                  })
+                }
+              />
+              {selected.external_attachments?.map((a) => (
+                <Stack key={a.id}>
+                  <span>
+                    External Zotero attachment:{" "}
+                    {a.metadata_json.filename || a.id}{" "}
+                    {a.managed_file_id ? "(managed copy available)" : ""}
+                  </span>
+                  <Button
+                    onClick={async () => {
+                      try {
+                        await api(`/zotero/attachments/${a.id}/copy`, "POST");
+                        setSelected(await api<Work>(`/works/${selected.id}`));
+                        await refresh();
+                      } catch (e) {
+                        fail(e);
+                      }
+                    }}
+                  >
+                    Copy PDF into ResearchOS
+                  </Button>
+                </Stack>
+              ))}
+              {selected.zotero_notes?.map((n) => (
+                <div key={n.id}>
+                  <strong>Zotero note</strong>
+                  <pre style={{ whiteSpace: "pre-wrap" }}>{n.content}</pre>
+                </div>
+              ))}
               <TextField
                 select
                 label="Reading status"
@@ -823,6 +1140,12 @@ export default function App() {
             onClick={async () => {
               if (selected) {
                 await patch(selected, {
+                  title: selected.title,
+                  authors: selected.authors,
+                  doi: selected.doi,
+                  journal: selected.journal,
+                  year: selected.year,
+                  publication_date: selected.publication_date,
                   status: selected.status,
                   tags: selected.tags.map((t) => t.trim()).filter(Boolean),
                   notes: selected.notes,

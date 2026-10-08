@@ -25,6 +25,18 @@ export type Work = {
   tags: string[];
   collections: number[];
   files: Attachment[];
+  zotero?: {
+    id: number;
+    library_id: number;
+    item_key: string;
+    status: string;
+  }[];
+  external_attachments?: {
+    id: number;
+    managed_file_id: number | null;
+    metadata_json: { filename?: string; contentType?: string };
+  }[];
+  zotero_notes?: { id: number; content: string }[];
 };
 export type Location = {
   url?: string;
@@ -75,6 +87,11 @@ declare global {
       config: () => Promise<{ base: string; token: string }>;
       pickPDFs: (folder?: boolean) => Promise<string[]>;
       openExternal: (url: string) => Promise<void>;
+      fullscreen: (enabled: boolean) => Promise<boolean>;
+      choosePath: (
+        kind: "save-backup" | "open-backup",
+      ) => Promise<string | undefined>;
+      useDataRoot: (path: string) => Promise<void>;
     };
   }
 }

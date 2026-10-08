@@ -6,7 +6,7 @@ export default defineConfig({
   resolve: { preserveSymlinks: true },
   test: {
     environment: "jsdom",
-    include: ["frontend/**/*.test.tsx"],
+    include: ["frontend/**/*.test.{ts,tsx}"],
     setupFiles: ["frontend/test-setup.ts"],
   },
 });
