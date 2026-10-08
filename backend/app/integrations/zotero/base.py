@@ -100,14 +100,30 @@ class ZoteroAPI:
         return r.content
     async def upload(self,key,path,filename):
         content=Path(path).read_bytes();md5=hashlib.md5(content).hexdigest()
+        current=await self.item(key)
+        previous=current['data'].get('md5')
+        if previous:
+            if previous==md5:return
+            raise ZoteroError(409,'Remote attachment has different contents; refusing to overwrite it')
         suffix=f'/items/{self.safe_key(key)}/file';headers={'If-None-Match':'*'}
         r=await self.request('POST',suffix,data={'md5':md5,'filename':filename,'filesize':str(len(content)),'mtime':str(int(Path(path).stat().st_mtime*1000))},headers=headers)
         authorization=r.json()
-        if authorization.get('exists'): return
+        if authorization.get('exists'):
+            await self.verify_upload(key,md5)
+            return
         url=authorization['url'];parsed=urlparse(url)
         if parsed.scheme!='https' and not(self.local and parsed.hostname in ('127.0.0.1','localhost','::1')):raise ZoteroError(502,'Invalid upload authorization URL')
         body=authorization.get('prefix','').encode()+content+authorization.get('suffix','').encode()
-        async with httpx.AsyncClient(transport=self.transport,timeout=120) as client:
-            r=await client.post(url,content=body,headers={'Content-Type':authorization['contentType']})
-            if r.status_code not in (200,201,204):raise ZoteroError(r.status_code,'Zotero PDF upload failed')
+        try:
+            async with httpx.AsyncClient(transport=self.transport,timeout=120) as client:
+                r=await client.post(url,content=body,headers={'Content-Type':authorization['contentType']})
+                if r.status_code not in (200,201,204):raise ZoteroError(r.status_code,'Zotero PDF upload failed')
+        except httpx.HTTPError:
+            raise ZoteroError(503,'PDF upload connection failed; retry the same Work when connectivity returns') from None
         await self.request('POST',suffix,data={'upload':authorization['uploadKey']},headers=headers)
+        await self.verify_upload(key,md5)
+
+    async def verify_upload(self,key,md5):
+        remote=await self.item(key)
+        if remote['data'].get('md5')!=md5:
+            raise ZoteroError(502,'Zotero has not confirmed the PDF checksum; retry the same Work')

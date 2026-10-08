@@ -1,6 +1,6 @@
 # ResearchOS Phase 2A / v0.2 acceptance report
 
-Status: **PARTIAL — mandatory live Zotero/manual gates remain open.** No Phase 2A PR has been opened or merged. No Phase 2B features are implemented.
+Status: **PARTIAL — two live manual scenarios were explicitly skipped by the Product Owner.** Submit for review with these exceptions; do not merge without formal acceptance. No Phase 2B features are implemented.
 
 Date: 2026-10-08 (Australia/Sydney). Repository: https://github.com/nzg1818-droid/ResearchOS . Branch: `feat/phase2a-zotero`.
 
@@ -17,7 +17,7 @@ Slices implemented:
 - Typed capability boundary and official Local/Web v3 adapters. Local APIs without write capability report read-only. Backend owns authentication, OS keyring owns secrets, and versions protect remote writes. Import preview, identity matching, external attachment references, explicit managed copying, push, collection mapping and field conflict resolution are exposed in the UI.
 - Verified SQLite/attachment backup, checksum validation, new-folder restore, diagnostics and RIS/BibTeX/CSL-JSON export.
 
-Latest local regression: **34 backend tests passed**, **11 frontend tests passed**, TypeScript check passed. Commands:
+Latest local regression: **36 backend tests passed**, **11 frontend tests passed**, TypeScript check passed. Commands:
 
 ```powershell
 # backend/
@@ -40,13 +40,19 @@ The first v0.2 package SHA-256 was `6bb708e859dd141601a270049e8ae63f41d7a90f2e3b
 
 Detailed actual renderer checks and remaining native/Zotero steps: `docs/phase2a-manual-acceptance.md`. Real Zotero credentials and test collection are user-controlled; no destructive operations were performed on the main library.
 
+### Final upload error correction
+
+A live push created the parent/attachment metadata while cloud bytes were unavailable. PDF failures now persist as `Error` with an explicit incomplete-upload explanation; ordinary metadata sync cannot clear that error. Retrying reuses the parent and attachment and verifies the remote checksum before reporting success. The UI refreshes sync states even when push fails. Mocked quota/retry and three-step upload tests cover this path, including withholding API credentials from the storage host. The corrected package has automated/build evidence; no successful cloud transfer is claimed.
+
+The current package checksum and final commit/CI/PR links are recorded in the delivered `release/phase2a-validation.json`. User launch/Reader/restore evidence applies to the earlier tested v0.2 package, not a new manual retest of the final correction.
+
 ## Acceptance matrix
 
 PASS rows state their evidence boundary. BLOCKED means required evidence is absent, not an assumed pass.
 
 | # | Result | Evidence |
 |---|---|---|
-| 1 | PASS | All 11 original backend tests retained in the 34-test run. |
+| 1 | PASS | All 11 original backend tests retained in the 36-test run. |
 | 2 | PASS | All 3 original frontend tests retained in the 11-test run. |
 | 3 | PASS | Production OpenAlex/Crossref adapters unchanged; original shape/parameter tests pass. |
 | 4 | PASS | Original import/persistence tests; actual PDF.js save and source backlink workflow. |
@@ -78,7 +84,7 @@ PASS rows state their evidence boundary. BLOCKED means required evidence is abse
 | 30 | PASS | Keyring-only registry; non-secret connection schema; canary persistence test. |
 | 31 | PASS | Canary scan of DB/logs/backup plus frontend localStorage test. |
 | 32 | PASS | Renderer calls authenticated local backend; Zotero API key remains backend-only after entry. |
-| 33 | BLOCKED | Mocked test/clear passes; real Windows keyring connection and revoke workflow pending. |
+| 33 | BLOCKED | Real Web Test connection confirmed by Product Owner; mocked clear passes. Native clear/revoke walkthrough remains unverified. |
 | 34 | PASS | Mocked Local API import test. |
 | 35 | PASS | Mocked Web API import test. |
 | 36 | PASS | Existing DOI matches one Work in parameterized test. |
@@ -97,7 +103,7 @@ PASS rows state their evidence boundary. BLOCKED means required evidence is abse
 | 49 | PASS | Repeated remote PDF copy retains one managed file/hash. |
 | 50 | PASS | Backup/manifest test with DB and managed PDFs. |
 | 51 | PASS | Canary absent from all backup entries; allow-listed archive contents. |
-| 52 | PASS | Automated new-directory restore preserves PDF, page and material. Native reopen pending separately. |
+| 52 | PASS | Automated new-directory restore preserves PDF, page and material; Product Owner confirmed native backup/restore, restart and source reopening work. |
 | 53 | PASS | Corrupt archive rejected before destination creation. |
 | 54 | PASS | RIS exports tested for single/selected/collection/library. |
 | 55 | PASS | BibTeX exports tested, including escaped delimiters. |
@@ -113,11 +119,11 @@ PASS rows state their evidence boundary. BLOCKED means required evidence is abse
 | 65 | PASS | CI 37725097791 upload-artifact step succeeded. |
 | 66 | PASS | Product Owner explicitly confirmed v0.2 application opens. |
 | 67 | PASS | Product Owner explicitly confirmed Windows Focus, Zen and Escape behavior on 2026-10-08. |
-| 68 | BLOCKED | Web API + dedicated test collection selected; actual import/push/conflict/PDF test pending. |
+| 68 | BLOCKED | Web connection, first import, repeat import without duplicates/errors, and destination parent item confirmed. PDF cloud transfer blocked by full Zotero storage and explicitly skipped; conflict walkthrough explicitly skipped. Test-collection workflow selected; no destructive operations performed. |
 
 ## Known limitations and outstanding review
 
-- Real Zotero Web writes/PDF upload and native restore-reopen must still be verified. Mocked results are not live acceptance.
+- Product Owner confirmed Web connection, repeatable import, destination parent creation and native backup/restore. PDF cloud upload remains unverified because Zotero storage is full; its manual acceptance and the conflict walkthrough were explicitly skipped. Automated conflict/upload checks do not replace these scenarios.
 - Collections remain flat locally; remote parent keys are preserved and shown. Mirror affects mapped membership only and never deletes remote items.
 - Bibliographic note comparison currently maps ResearchOS paper notes to Zotero `extra`; child notes are separately retained with origin. Optional named ResearchOS notes are version-checked; externally changed named notes are refused until reviewed. This distinction must be assessed during real Zotero acceptance.
 - Remote deletion is not propagated as local deletion. There is no destructive sync capability.
@@ -126,4 +132,4 @@ PASS rows state their evidence boundary. BLOCKED means required evidence is abse
 - Request-level import failures abort the current import transaction and return an error; partial per-item recovery is not implemented. Full-library preview can be slow because child metadata is fetched for each selected parent.
 - One upstream Starlette/httpx deprecation warning remains. Main renderer chunk exceeds Vite's advisory threshold; PDF-heavy code is nevertheless separately loaded.
 
-Do not mark the phase complete or merge before the remaining evidence and any resulting fixes have been reviewed.
+The Product Owner authorized skipping the two manual scenarios and continuing delivery. A review PR may be opened with these exceptions. Do not mark the phase PASS or merge before formal Product Owner acceptance.

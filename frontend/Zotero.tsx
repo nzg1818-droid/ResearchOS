@@ -451,13 +451,16 @@ export default function Zotero({
                 const work_ids = ids.split(",").map((x) => Number(x.trim()));
                 if (work_ids.some((x) => !Number.isInteger(x) || x < 1))
                   throw new Error("Enter valid Work IDs");
-                await api(`/zotero/${connection}/push`, "POST", {
-                  work_ids,
-                  collection: destination || null,
-                  note: sendNote,
-                  pdf: sendPdf,
-                });
-                await loadStates();
+                  try {
+                    await api(`/zotero/${connection}/push`, "POST", {
+                      work_ids,
+                      collection: destination || null,
+                      note: sendNote,
+                      pdf: sendPdf,
+                    });
+                  } finally {
+                    await loadStates();
+                  }
                 setMessage("Push finished. Review status below.");
               })
             }

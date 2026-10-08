@@ -25,10 +25,11 @@ def apply_local(session,library,work,value):
         elif mapping.remote_key not in value['collections'] and member and mapping.mirror:session.delete(member)
 
 def mark_synced(session,library,state,work,remote):
+    pending_upload = state.error if (state.error or '').startswith('PDF upload incomplete:') else None
     value=from_remote(remote)
     state.remote_version=remote['version'];state.remote_snapshot=remote;state.base=value
     state.local_fingerprint=fingerprint(local_value(session,library,work))
-    state.status='In sync';state.conflicts={};state.error=None;state.last_synced_at=now()
+    state.status='Error' if pending_upload else 'In sync';state.conflicts={};state.error=pending_upload;state.last_synced_at=now()
 
 def record_conflict(state,local,remote,base,reason='Both sides changed'):
     state.status='Conflict';state.remote_snapshot=remote
@@ -206,13 +207,21 @@ async def push_new(session,library,adapter,work,collection=None,note=False,pdf=F
             session.add(RemoteNote(library_id=library.id,work_id=work.id,item_key=target['key'],content=body,version=target['version']))
         session.commit()
     if pdf:
-        children=await adapter.children(state.item_key)
-        for file in session.scalars(select(File).where(File.work_id==work.id)):
-            marker='ResearchOS SHA-256: '+file.sha256
-            attachment=next((i for i in children if i['data'].get('title')==marker),None)
-            if attachment and attachment['data'].get('md5'):continue
-            if attachment is None:attachment=await adapter.create({'itemType':'attachment','parentItem':state.item_key,'linkMode':'imported_file','title':marker,'filename':file.name,'contentType':'application/pdf','tags':[]})
-            await adapter.upload(attachment['key'],Storage(root).resolve(file.path),file.name)
+        try:
+            children=await adapter.children(state.item_key)
+            for file in session.scalars(select(File).where(File.work_id==work.id)):
+                marker='ResearchOS SHA-256: '+file.sha256
+                attachment=next((i for i in children if i['data'].get('title')==marker),None)
+                if attachment is None:attachment=await adapter.create({'itemType':'attachment','parentItem':state.item_key,'linkMode':'imported_file','title':marker,'filename':file.name,'contentType':'application/pdf','tags':[]})
+                await adapter.upload(attachment['key'],Storage(root).resolve(file.path),file.name)
+        except (ZoteroError, OSError) as error:
+            detail=str(error) if isinstance(error,ZoteroError) else 'Managed PDF cannot be read'
+            state.status='Error';state.error='PDF upload incomplete: metadata is linked, but PDF transfer failed. '+detail
+            session.commit()
+            raise ZoteroError(error.status if isinstance(error,ZoteroError) else 422,state.error) from None
+        if (state.error or '').startswith('PDF upload incomplete:'):
+            state.error=None;state.status='In sync'
+        session.commit()
     return state
 
 async def copy_attachment(session,adapter,attachment,root):

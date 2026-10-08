@@ -10,18 +10,23 @@ from app.db import Work, File, initialize
 from app.phase2_models import ExternalAttachment
 from app.integrations.zotero.mapping import from_remote
 from test_core import make_pdf
+from test_core import wait_job
+from urllib.parse import parse_qs
 
 def remote(key='ITEM0001',doi='10.1234/zotero'):
     return {'key':key,'version':1,'data':{'key':key,'version':1,'itemType':'journalArticle','title':'Catalyst paper','DOI':doi,'creators':[{'creatorType':'author','name':'Alice'}],'date':'2024','publicationTitle':'Journal','tags':[{'tag':'OER'}],'extra':'','collections':['COLL0001'],'url':'https://example.org/paper'}}
 
 class Server:
-    def __init__(self):self.items={'ITEM0001':remote()};self.version=1;self.calls=[];self.race=False;self.pdf=b''
+    def __init__(self):self.items={'ITEM0001':remote()};self.version=1;self.calls=[];self.race=False;self.pdf=b'';self.quota_full=False
     def route(self,r):
         self.calls.append(r);path=r.url.path;headers={'Last-Modified-Version':str(self.version)}
         if r.method=='GET' and path.endswith('/collections'):return httpx.Response(200,json=[{'key':'COLL0001','version':1,'data':{'name':'Test collection','parentCollection':False}}],headers=headers)
         if path.endswith('/children'):return httpx.Response(200,json=[i for i in self.items.values() if i['data'].get('parentItem')==path.split('/')[-2]],headers=headers)
         if path.endswith('/file'):
             if r.method=='GET':return httpx.Response(200,content=self.pdf,headers=headers)
+            if self.quota_full:return httpx.Response(413)
+            key=path.split('/')[-2];form=parse_qs(r.content.decode())
+            if 'md5' in form:self.items[key]['data']['md5']=form['md5'][0]
             return httpx.Response(200,json={'exists':1},headers=headers)
         if r.method=='GET' and path.endswith('/items'):
             items=list(self.items.values());since=int(r.url.params.get('since','0'));items=[i for i in items if i['version']>since]
@@ -175,3 +180,45 @@ def test_remote_named_note_edit_is_not_silently_overwritten(environment):
     assert result.status_code==409
     assert 'User remote edit' in server.items[note['key']]['data']['note']
     assert len([i for i in server.items.values() if i['data'].get('title')=='Note roundtrip'])==1
+
+def test_quota_failure_persists_and_retry_reuses_parent_and_attachment(environment,tmp_path):
+    c,server,app,secrets=environment;id=connect(c)
+    pdf=tmp_path/'test.pdf';make_pdf(pdf)
+    result=wait_job(c,c.post('/imports',json={'paths':[str(pdf)]}).json()['job_id'])['result']['imports'][0]
+    payload={'work_ids':[result['work_id']],'collection':'COLL0001','pdf':True}
+    server.quota_full=True
+    failure=c.post(f'/zotero/{id}/push',json=payload)
+    assert failure.status_code==413
+    assert 'quota' in failure.json()['detail']
+    state=c.get(f'/zotero/{id}/states').json()[0]
+    assert state['status']=='Error' and 'PDF upload incomplete' in state['error']
+    assert c.post(f'/zotero/{id}/sync').json()[0]['status']=='Error'
+    parent=state['item_key'];attachment=next(i['key'] for i in server.items.values() if i['data'].get('parentItem')==parent)
+    server.quota_full=False
+    retried=c.post(f'/zotero/{id}/push',json=payload)
+    assert retried.status_code==200,retried.text
+    assert retried.json()[0]['status']=='In sync'
+    assert retried.json()[0]['item_key']==parent
+    assert [i['key'] for i in server.items.values() if i['data'].get('parentItem')==parent]==[attachment]
+    assert server.items[attachment]['data']['md5']
+
+def test_upload_three_steps_checksum_and_no_credentials_to_storage(tmp_path):
+    import asyncio,hashlib
+    from app.integrations.zotero.web import ZoteroWeb
+    pdf=tmp_path/'upload.pdf';make_pdf(pdf);content=pdf.read_bytes();digest=hashlib.md5(content).hexdigest();registered=False;steps=[]
+    def route(r):
+        nonlocal registered
+        if r.url.host=='storage.example':
+            assert 'Zotero-API-Key' not in r.headers
+            assert r.content==b'PREFIX'+content+b'SUFFIX';steps.append('bytes')
+            return httpx.Response(201)
+        if r.method=='GET':return httpx.Response(200,json={'key':'ATTACH01','version':2,'data':{'md5':digest if registered else None}})
+        assert r.headers['If-None-Match']=='*'
+        form=parse_qs(r.content.decode())
+        if 'upload' in form:
+            assert form['upload']==['UPLOADKEY'];registered=True;steps.append('register');return httpx.Response(204)
+        assert form['md5']==[digest];steps.append('authorize')
+        return httpx.Response(200,json={'url':'https://storage.example/upload','contentType':'multipart/form-data; boundary=test','prefix':'PREFIX','suffix':'SUFFIX','uploadKey':'UPLOADKEY'})
+    adapter=ZoteroWeb('user','123','CANARY',transport=httpx.MockTransport(route))
+    asyncio.run(adapter.upload('ATTACH01',pdf,pdf.name))
+    assert steps==['authorize','bytes','register']
