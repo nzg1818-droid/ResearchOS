@@ -1,6 +1,13 @@
 """Phase 1 initial schema and local full-text index."""
 from alembic import op
-from app.db import Base
+import importlib.util
+import sys
+from pathlib import Path
+_spec = importlib.util.spec_from_file_location('phase1_schema', Path(__file__).parents[1] / 'phase1_schema.py')
+_module = importlib.util.module_from_spec(_spec)
+sys.modules[_spec.name] = _module
+_spec.loader.exec_module(_module)
+Base = _module.Base
 revision = '0001'
 down_revision = None
 

@@ -7,6 +7,7 @@ from sqlalchemy import select
 from .db import File, Work
 from .canonical import doi, normalized, upsert
 from .schemas import Hit
+from .storage import Storage
 
 def import_pdf(session, data: Path, path: Path, work_id=None):
     path = path.resolve(strict=True)
@@ -34,17 +35,13 @@ def import_pdf(session, data: Path, path: Path, work_id=None):
     if work is None and extracted_doi:
         work = session.scalar(select(Work).where(Work.doi == extracted_doi))
     if work is None:
-        matches = [w for w in session.scalars(select(Work)) if normalized(w.title) == normalized(title) and (not extracted_doi or not w.doi or w.doi == extracted_doi)]
+        matches = [w for w in session.scalars(select(Work).where(Work.title_key == normalized(title))) if not extracted_doi or not w.doi or w.doi == extracted_doi]
         if len(matches) == 1: work = matches[0]
     if work is None:
         work = upsert(session, Hit(source='local_pdf', source_id=digest, doi=extracted_doi, title=title, raw={'filename': path.name, 'sha256': digest}))
     work.in_library = True
-    destination = data / 'files' / (digest + '.pdf')
-    if not destination.exists():
-        temporary = destination.with_suffix('.tmp')
-        shutil.copyfile(path, temporary)
-        temporary.replace(destination)
-    file = File(work_id=work.id, sha256=digest, path=str(destination), name=path.name, pages=pages, extracted_doi=extracted_doi, extracted_title=title)
+    destination = Storage(data).copy(path, digest)
+    file = File(work_id=work.id, sha256=digest, path=destination, name=path.name, pages=pages, extracted_doi=extracted_doi, extracted_title=title)
     session.add(file)
     session.flush()
     return {'file_id': file.id, 'work_id': work.id, 'duplicate': False}

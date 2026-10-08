@@ -17,6 +17,10 @@ from .schemas import Search, LibraryPatch, ImportRequest, AnnotationInput
 from .canonical import upsert
 from .adapters import federated
 from .importer import import_pdf
+from .storage import Storage
+from .textutils import local_context
+from .phase2_models import SearchRun, SearchRunHit
+from .db import now
 
 def create_app(data_dir=None, token=None):
     data = Path(data_dir or os.environ.get('RESEARCHOS_DATA_DIR') or Path(os.getenv('LOCALAPPDATA', Path.home())) / 'ResearchOS')
@@ -88,7 +92,9 @@ def create_app(data_dir=None, token=None):
             if kind == 'search':
                 hits, errors, counts = await federated(Search(**payload))
                 with write_lock, sessions.begin() as s:
-                    ids = list(dict.fromkeys(upsert(s, hit).id for hit in hits))
+                    run = SearchRun(job_id=id,query=payload['query'],mode=payload['mode'],filters={k:payload.get(k) for k in ('start','end','limit')},sources=payload['sources'],errors=errors,finished_at=now())
+                    s.add(run); s.flush()
+                    ids = list(dict.fromkeys(upsert(s, hit, run).id for hit in hits))
                     surviving = set(s.scalars(select(Work.id).where(Work.id.in_(ids))))
                     ids = [id for id in ids if id in surviving]
                 result = {'work_ids': ids, 'errors': errors, 'source_counts': counts}
@@ -117,7 +123,12 @@ def create_app(data_dir=None, token=None):
         return {'job_id': id}
 
     @app.get('/health')
-    def health(): return {'status': 'ok', 'version': '0.1.0', 'data_dir': str(data)}
+    def health(): return {'status': 'ok', 'version': '0.2.0', 'data_dir': str(data)}
+
+    @app.get('/search-runs')
+    def search_runs():
+        with sessions() as s:
+            return [{**columns(r),'hits':[columns(h) for h in s.scalars(select(SearchRunHit).where(SearchRunHit.run_id==r.id))]} for r in s.scalars(select(SearchRun).order_by(SearchRun.id.desc()).limit(100))]
 
     @app.post('/search')
     async def search(body: Search): return submit('search', body.model_dump(mode='json'))
@@ -218,8 +229,9 @@ def create_app(data_dir=None, token=None):
     def content(id: int):
         with sessions() as s:
             f = required(s, File, id)
-            if not Path(f.path).is_file(): raise HTTPException(404, 'Managed PDF is missing')
-            return FileResponse(f.path, media_type='application/pdf')
+            path = Storage(data).resolve(f.path)
+            if not path.is_file(): raise HTTPException(404, 'Managed PDF is missing')
+            return FileResponse(path, media_type='application/pdf')
 
     @app.get('/files/{id}/annotations')
     def annotations(id: int):
@@ -231,7 +243,10 @@ def create_app(data_dir=None, token=None):
             f = required(s, File, body.file_id)
             if body.page > f.pages: raise HTTPException(422, 'Page is outside this PDF')
             w = required(s, Work, f.work_id)
-            a = Annotation(work_id=w.id, **body.model_dump(exclude={'kind'}))
+            values = body.model_dump(exclude={'kind'})
+            context = local_context(body.context,body.text)
+            values.update(context=context['context'],context_before=context['before'],context_after=context['after'])
+            a = Annotation(work_id=w.id, **values)
             s.add(a); s.flush()
             if body.kind != 'highlight':
                 s.add(Material(annotation_id=a.id, kind=body.kind, provenance={'work_id': w.id, 'title': w.title, 'doi': w.doi, 'authors': w.authors, 'year': w.year, 'file_id': f.id, 'sha256': f.sha256, 'filename': f.name, 'page': a.page, 'text': a.text, 'context': a.context, 'rects': a.rects, 'note': a.note, 'tags': a.tags, 'timestamp': a.created_at}))

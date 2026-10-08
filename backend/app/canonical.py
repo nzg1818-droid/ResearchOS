@@ -1,5 +1,7 @@
 import re
 import unicodedata
+import hashlib
+import json
 from urllib.parse import unquote
 from sqlalchemy import select
 from .db import Work, Identifier, SourceHit, File, Annotation, Material, CollectionWork
@@ -20,7 +22,11 @@ def fingerprint(title, authors, year):
 
 def merge_work(session, winner, duplicate):
     """Resolve a later DOI bridge while preserving library data and source backlinks."""
-    for cls in (Identifier, SourceHit, File, Annotation):
+    from .phase2_models import SearchRunHit, SyncState, ExternalAttachment, RemoteNote
+    # A linked identity requires explicit reconciliation instead of a DOI bridge.
+    if session.scalar(select(SyncState.id).where(SyncState.work_id.in_([winner.id, duplicate.id])).limit(1)):
+        return False
+    for cls in (Identifier, SourceHit, File, Annotation, SearchRunHit, ExternalAttachment, RemoteNote):
         for record in session.scalars(select(cls).where(cls.work_id == duplicate.id)):
             record.work_id = winner.id
     for member in session.scalars(select(CollectionWork).where(CollectionWork.work_id == duplicate.id)):
@@ -45,7 +51,7 @@ def merge_work(session, winner, duplicate):
     session.delete(duplicate)
     session.flush()
 
-def upsert(session, hit: Hit):
+def upsert(session, hit: Hit, run=None):
     identifier = doi(hit.doi)
     key = hit.source + ':' + hit.source_id
     work = session.scalar(select(Work).where(Work.doi == identifier)) if identifier else None
@@ -60,7 +66,7 @@ def upsert(session, hit: Hit):
             work = candidate
     fp = fingerprint(hit.title, hit.authors, hit.year)
     if work is None and fp:
-        for candidate in session.scalars(select(Work).where(Work.year == hit.year)):
+        for candidate in session.scalars(select(Work).where(Work.title_key == normalized(hit.title), Work.author_key == normalized(hit.authors[0]), Work.year == hit.year)):
             if candidate.doi and identifier and candidate.doi != identifier:
                 continue
             if fingerprint(candidate.title, candidate.authors, candidate.year) == fp:
@@ -94,6 +100,15 @@ def upsert(session, hit: Hit):
         work.oa_locations = locations
     if source is None:
         session.add(Identifier(key=key, work_id=work.id))
-    session.add(SourceHit(work_id=work.id, source=hit.source, raw=hit.raw))
-    session.flush()
+    digest = hashlib.sha256(json.dumps([hit.source,hit.source_id,hit.raw],sort_keys=True,ensure_ascii=False).encode()).hexdigest()
+    evidence = session.scalar(select(SourceHit).where(SourceHit.snapshot_hash == digest, SourceHit.work_id == work.id).limit(1))
+    if evidence is None:
+        evidence = SourceHit(work_id=work.id, source=hit.source, raw=hit.raw, snapshot_hash=digest)
+        session.add(evidence)
+        session.flush()
+    if run is not None:
+        from .phase2_models import SearchRunHit
+        existing = session.scalar(select(SearchRunHit).where(SearchRunHit.run_id == run.id, SearchRunHit.source == hit.source, SearchRunHit.source_id == hit.source_id))
+        if existing is None:
+            session.add(SearchRunHit(run_id=run.id, source_hit_id=evidence.id, work_id=work.id, source=hit.source, source_id=hit.source_id))
     return work
