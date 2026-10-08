@@ -139,3 +139,39 @@ def test_reject_non_loopback_and_unauthed_requests(environment):
     c,*_=environment
     assert c.post('/zotero/connections',json={'mode':'local','endpoint':'http://evil.example/api'}).status_code==422
     assert c.get('/zotero/connections',headers={'X-ResearchOS-Token':'bad'}).status_code==401
+
+def test_reimport_pulls_remote_only_but_does_not_push_local_changes(environment):
+    c,server,app,secrets=environment;id=connect(c);work=imported(c,id)
+    server.edit(title='Reimported remote title')
+    result=c.post(f'/zotero/{id}/import',json={}).json()
+    assert result['updated']==1
+    assert c.get(f"/works/{work['id']}").json()['title']=='Reimported remote title'
+    c.patch(f"/works/{work['id']}",json={'title':'Local edits'})
+    server.edit(title='Another remote edit')
+    assert c.post(f'/zotero/{id}/import',json={}).json()['conflicts']==1
+    assert server.items['ITEM0001']['data']['title']=='Another remote edit'
+    assert not any(r.method=='PATCH' for r in server.calls)
+
+def test_author_edit_preserves_remote_editor_and_refreshes_child_metadata(environment):
+    c,server,app,secrets=environment;id=connect(c);work=imported(c,id)
+    editor={'creatorType':'editor','name':'Existing Editor'}
+    server.items['ITEM0001']['data']['creators'].append(editor)
+    c.patch(f"/works/{work['id']}",json={'authors':['Bob']})
+    assert c.post(f'/zotero/{id}/sync').json()[0]['status']=='In sync'
+    assert editor in server.items['ITEM0001']['data']['creators']
+    server.version+=1
+    server.items['NOTE0002']={'key':'NOTE0002','version':server.version,'data':{'itemType':'note','parentItem':'ITEM0001','note':'New remote note'}}
+    c.post(f'/zotero/{id}/sync')
+    assert c.get(f"/works/{work['id']}").json()['zotero_notes'][0]['content']=='New remote note'
+
+def test_remote_named_note_edit_is_not_silently_overwritten(environment):
+    c,server,app,secrets=environment;id=connect(c)
+    work=c.post('/works',json={'title':'Note roundtrip','notes':'Original note'}).json()
+    payload={'work_ids':[work['id']],'note':True}
+    assert c.post(f'/zotero/{id}/push',json=payload).status_code==200
+    note=next(i for i in server.items.values() if i['data'].get('itemType')=='note')
+    server.edit(note['key'],note='<h1>ResearchOS note</h1><p>User remote edit</p>')
+    result=c.post(f'/zotero/{id}/push',json=payload)
+    assert result.status_code==409
+    assert 'User remote edit' in server.items[note['key']]['data']['note']
+    assert len([i for i in server.items.values() if i['data'].get('title')=='Note roundtrip'])==1

@@ -72,7 +72,19 @@ def import_items(session,library,items):
         if item['data'].get('itemType') in ('attachment','note','annotation'):continue
         state=session.scalar(select(SyncState).where(SyncState.library_id==library.id,SyncState.item_key==item['key']))
         if state:
-            parents[item['key']]=state.work_id;counts['skipped']+=1;continue
+            parents[item['key']]=state.work_id
+            value=from_remote(item);work=session.get(Work,state.work_id);local=local_value(session,library,work)
+            if value!=state.base:
+                if state.status=='Conflict' or fingerprint(local)!=state.local_fingerprint or (work.doi and value['doi'] and work.doi!=value['doi']):
+                    record_conflict(state,local,item,state.base,'Import differs from local changes; explicit resolution required');counts['conflicts']+=1
+                else:
+                    other=session.scalar(select(Work.id).where(Work.doi==value['doi'],Work.id!=work.id)) if value['doi'] else None
+                    if other:
+                        record_conflict(state,local,item,state.base,'Remote DOI belongs to another Work');counts['conflicts']+=1
+                    else:
+                        apply_local(session,library,work,value);session.flush();mark_synced(session,library,state,work,item);counts['updated']+=1
+            else:counts['skipped']+=1
+            continue
         work,conflict=find_match(session,item);created=work is None
         if created:
             work=Work(title=from_remote(item)['title'],in_library=True);session.add(work);session.flush()
@@ -120,6 +132,8 @@ async def sync_one(session,library,adapter,state,resolution=None):
     local_changed=fingerprint(local)!=state.local_fingerprint
     remote_changed=remote_value!=state.base
     doi_conflict=bool(local['doi'] and remote_value['doi'] and local['doi']!=remote_value['doi'])
+    if remote_value['doi'] and session.scalar(select(Work.id).where(Work.doi==remote_value['doi'],Work.id!=work.id)):
+        doi_conflict=True
     if resolution is not None:
         if remote['version']!=resolution['version']:
             record_conflict(state,local,remote,state.base,'Remote changed while resolving; review again');return
@@ -141,6 +155,8 @@ async def sync_one(session,library,adapter,state,resolution=None):
         state.status='Local changes'
         payload=to_remote(local);original=to_remote(remote_value)
         patch={k:v for k,v in payload.items() if original.get(k)!=v}
+        if 'creators' in patch:
+            patch['creators'] += [c for c in remote['data'].get('creators',[]) if c.get('creatorType','author')!='author']
         # Preserve remote memberships not represented by a ResearchOS mapping.
         mapped={m.remote_key for m in mappings(session,library)}
         if 'collections' in patch:patch['collections']=sorted(set(patch['collections'])|{k for k in remote_value['collections'] if k not in mapped})

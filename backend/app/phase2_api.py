@@ -166,6 +166,7 @@ def register(app,sessions,root,write_lock):
                         try:await sync.sync_one(s,library,adapter,state)
                         except ZoteroError as error:state.status='Error';state.error=str(error)
                     results.append(columns(state))
+                sync.import_items(s,library,[i for i in changed.values() if i['data'].get('itemType') in ('note','attachment')])
                 library.version=checkpoint;library.last_synced_at=now();return results
     @app.post('/zotero/{id}/push')
     async def push(id:int,body:PushInput):
