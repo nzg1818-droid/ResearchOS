@@ -9,122 +9,75 @@ body {
   display: flex;
   min-height: 100vh;
 }
-.sidebar {
-  width: 235px;
-  flex-shrink: 0;
-  background: #fff;
-  border-right: 1px solid #e1e7ec;
-  padding: 30px 18px;
-  position: fixed;
-  inset: 0 auto 0 0;
+main {
+  flex: 1;
+  min-width: 0;
+}
+.app-shell {
   display: flex;
   flex-direction: column;
 }
-.brand {
+.app-navigation {
+  height: 54px;
+  box-sizing: border-box;
   display: flex;
   align-items: center;
-  gap: 11px;
-  margin: 0 6px 48px;
+  gap: 8px;
+  padding: 0 16px;
+  border-bottom: 1px solid #dce3e7;
+  background: white;
 }
-.brand strong {
-  font-size: 21px;
-  letter-spacing: -0.7px;
-}
-.brand small {
-  display: block;
-  font-size: 8px;
-  letter-spacing: 1.5px;
-  color: #7f8994;
-  margin-top: 3px;
-}
-.brand-symbol {
-  display: grid;
-  place-items: center;
-  width: 35px;
-  height: 40px;
-  background: #1c665f;
-  border-radius: 10px;
-  color: white;
-  font-size: 25px;
-  font-family: Georgia, serif;
-}
-.workspace-label {
-  font-size: 10px;
-  letter-spacing: 1.6px;
-  color: #8b97a2;
-  margin: 0 16px 16px;
+.nav-destinations {
+  display: flex;
+  gap: 3px;
 }
 .nav-item {
   border: 0;
   background: transparent;
-  border-radius: 9px;
-  padding: 14px 15px;
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  text-align: left;
-  font-size: 14px;
-  color: #62717e;
+  border-radius: 6px;
+  padding: 9px;
   cursor: pointer;
-  margin-bottom: 5px;
-}
-.nav-item:hover {
-  background: #f3f7f7;
+  color: #405961;
 }
 .nav-item.active {
-  background: #e7f1ee;
+  background: #e2f0eb;
   color: #195b54;
   font-weight: 650;
 }
 .nav-number {
-  font-size: 10px;
+  font-size: 9px;
+  margin-right: 3px;
   opacity: 0.6;
 }
-.sidebar-foot {
-  margin-top: auto;
-  font-size: 12px;
-  color: #57756d;
-  padding: 14px 8px;
-}
-.sidebar-foot small {
-  display: block;
-  font-size: 10px;
-  color: #8c979c;
-  margin-top: 8px;
-  line-height: 1.7;
-}
-.status-dot {
-  display: inline-block;
-  width: 6px;
-  height: 6px;
-  border-radius: 50%;
-  background: #389776;
-  margin-right: 7px;
-}
-main {
-  margin-left: 235px;
+.nav-spacer {
   flex: 1;
-  min-width: 0;
 }
-.topbar {
-  height: 70px;
-  background: #ffffffd9;
-  border-bottom: 1px solid #e1e7ec;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 0 38px;
-  font-size: 12px;
-  color: #71808b;
-}
-.slash {
-  padding: 0 12px;
-  color: #bcc5cc;
+.nav-overflow {
+  display: none;
 }
 .page-content {
-  padding: 34px 38px;
+  padding: 24px;
   max-width: 1600px;
   margin: auto;
+}
+.reader-content {
+  padding: 0;
+  max-width: none;
+}
+.reader-focus .app-navigation {
+  display: none;
+}
+:focus-visible {
+  outline: 2px solid #16766a;
+  outline-offset: 2px;
+}
+@media (max-width: 1100px) {
+  .nav-destinations {
+    display: none;
+  }
+  .nav-overflow {
+    display: block;
+  }
 }
 .page-title {
   display: flex;
@@ -205,20 +158,80 @@ blockquote {
   color: #9a4036;
   overflow-wrap: anywhere;
 }
+.reader-workspace {
+  height: calc(100vh - 54px);
+  display: flex;
+  flex-direction: column;
+  position: relative;
+}
+.reader-focus .reader-workspace {
+  height: 100vh;
+}
 .reader-toolbar {
-  padding-bottom: 20px;
+  padding: 5px 8px;
+  gap: 4px !important;
+  background: white;
   flex-wrap: wrap;
+  z-index: 10;
+  border-bottom: 1px solid #dce3e7;
+}
+.reader-toolbar .MuiButton-root {
+  min-width: 32px;
+  font-size: 11px;
+  padding: 5px;
 }
 .reader-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 285px;
-  gap: 22px;
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  gap: 0;
 }
 .pdf-scroll {
   background: #dce2e5;
   padding: 20px;
   overflow: auto;
-  max-height: calc(100vh - 230px);
+  flex: 1;
+  min-width: 0;
+  scroll-behavior: smooth;
+}
+.reader-panel {
+  flex-shrink: 0;
+  box-sizing: border-box;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #dce3e7;
+  background: white;
+}
+.reader-panel label {
+  font-size: 11px;
+  display: block;
+}
+.reader-panel input[type="range"] {
+  width: 100%;
+}
+.zen .reader-toolbar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+}
+.zen .reader-toolbar.auto-hidden {
+  opacity: 0;
+  pointer-events: none;
+}
+.zen .reader-toolbar:focus-within {
+  opacity: 1;
+  pointer-events: auto;
+}
+.thumbnail {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  width: 100%;
+  padding: 10px;
+  border: 1px solid #dce3e7;
+  background: #f6f8fa;
+  cursor: pointer;
 }
 .pdf-page {
   position: relative;
@@ -244,14 +257,6 @@ blockquote {
   background: #ffb83399;
   outline: 2px solid #c58410;
 }
-.evidence-panel {
-  background: #fff;
-  padding: 20px;
-  border: 1px solid #e1e7ec;
-  border-radius: 10px;
-  max-height: calc(100vh - 230px);
-  overflow: auto;
-}
 .annotation-card {
   padding: 12px 0;
   border-top: 1px solid #e1e7ec;
@@ -262,18 +267,4 @@ blockquote {
 }
 .MuiDialog-paper .MuiDialogContent-root {
   padding-top: 12px;
-}
-@media (max-width: 1150px) {
-  .sidebar {
-    width: 195px;
-  }
-  main {
-    margin-left: 195px;
-  }
-  .page-content {
-    padding: 25px;
-  }
-  .reader-layout {
-    grid-template-columns: minmax(0, 1fr) 245px;
-  }
 }
