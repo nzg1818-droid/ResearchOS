@@ -569,6 +569,17 @@ export default function App() {
               <Button onClick={() => setNewPaper("")}>New paper</Button>
             </Stack>
           )}
+          {view === "Library" && checked.length > 0 && (
+            <Suspense fallback={<LinearProgress />}>
+              <BatchIntelligence
+                workIds={checked}
+                onStarted={(id) => {
+                  setActiveJob(id);
+                  setView("Tasks");
+                }}
+              />
+            </Suspense>
+          )}
           {["Search", "Library"].includes(view) && (
             <TextField
               select
@@ -748,6 +759,7 @@ export default function App() {
                   {...reader}
                   file={reader.file}
                   initialPage={reader.page}
+                  onEvidenceFile={(a) => void openEvidence(a)}
                   onBack={() => setView("Library")}
                   onSaved={() => {
                     void refresh();
@@ -1030,6 +1042,28 @@ export default function App() {
           >
             Create paper
           </Button>
+        </DialogActions>
+      </Dialog>
+      <Dialog
+        open={!!intelligenceWork}
+        onClose={() => setIntelligenceWork(null)}
+        maxWidth="lg"
+        fullWidth
+      >
+        <DialogTitle>{intelligenceWork?.title} · Intelligence</DialogTitle>
+        <DialogContent>
+          {intelligenceWork && (
+            <Suspense fallback={<LinearProgress />}>
+              <Intelligence
+                workId={intelligenceWork.id}
+                onEvidence={(a) => void openEvidence(a)}
+                onSaved={() => void refresh()}
+              />
+            </Suspense>
+          )}
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setIntelligenceWork(null)}>Close</Button>
         </DialogActions>
       </Dialog>
       <Dialog

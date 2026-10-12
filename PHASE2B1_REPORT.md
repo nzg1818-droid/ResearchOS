@@ -8,7 +8,7 @@ Branch: `feat/phase2b1-paper-intelligence`, based on the existing specification 
 
 Vertical slices: Zotero onboarding/reauthorization; 0003 schema + parsing/FTS; typed providers + versioned schema/prompts + deterministic validation; Reader review/Ask + Knowledge + resumable batches + export; Windows packaging and evidence report.
 
-Latest local suite: **52 backend tests, 16 frontend tests passed**, TypeScript passed. One upstream Starlette/httpx deprecation warning remains. Vite emits an advisory main-chunk size warning; Intelligence, AISettings, Reader and PDF worker are separate chunks.
+Latest local suite: **52 backend tests, 17 frontend tests passed**, TypeScript passed. One upstream Starlette/httpx deprecation warning remains. Vite emits an advisory main-chunk size warning; Intelligence, AISettings, Reader and PDF worker are separate chunks.
 
 ```powershell
 # backend
@@ -21,6 +21,8 @@ node node_modules/vitest/vitest.mjs run --pool=threads --configLoader native
 ```
 
 Windows package: `release/ResearchOS-0.3.0-win-x64.zip`, SHA-256 in adjacent `.sha256`. Extract all files and run `ResearchOS-0.3.0-portable/ResearchOS.exe`. No Python/Node required on the destination machine. Unsigned portable executable. `release/phase2b1-frozen-smoke.json` records isolated packaged-sidecar checks; these exercise the packaged prompts and local Mock, not a real cloud model.
+
+Published implementation `c0a682e6716d53c2d327a96c75b04e7ff70c2c82` passed [Windows CI 38219956334](https://github.com/nzg1818-droid/ResearchOS/actions/runs/38219956334), including all backend/frontend tests, packaging, frozen smoke and artifact upload. That run had 16 frontend tests; the subsequent Library entry-point correction adds the 17th local frontend regression. The PR checks and delivered validation manifest identify the final follow-up run.
 
 ## Migration and privacy
 
@@ -36,7 +38,7 @@ PASS reflects the stated evidence boundary. Mock/API/component evidence is not a
 |---|---|---|---|
 | 1 | PASS | All Phase 2A backend tests still pass. | Full original regression suites retained; Zotero, annotations/backlinks, backup, search/import tests pass. Native Phase 2B1 manual checks remain separate. |
 | 2 | PASS | All Phase 2A frontend tests still pass. | Full original regression suites retained; Zotero, annotations/backlinks, backup, search/import tests pass. Native Phase 2B1 manual checks remain separate. |
-| 3 | PASS | Windows portable build still succeeds. | Local build-windows.ps1 succeeds; frozen sidecar synthetic import/extract/Ask smoke passes. Matching Windows CI pending. |
+| 3 | PASS | Windows portable build still succeeds. | Local build-windows.ps1 succeeds; frozen sidecar synthetic import/extract/Ask smoke passes. Windows CI 38219956334 also passed packaging and frozen smoke. |
 | 4 | PASS | Search/Library/Reader/Knowledge/Zotero/backup remain functional. | Full original regression suites retained; Zotero, annotations/backlinks, backup, search/import tests pass. Native Phase 2B1 manual checks remain separate. |
 | 5 | PASS | Zotero Web key introspection can identify/validate personal user ID and permissions without putting the key in URLs/logs/storage. | test_account_introspection_allowlists_response / test_local_write_auth_expiry_is_actionable_without_retry; official endpoint, header-only secret and one request asserted. |
 | 6 | PASS | Local Zotero 401 presents a clear re-authorization path. | test_account_introspection_allowlists_response / test_local_write_auth_expiry_is_actionable_without_retry; official endpoint, header-only secret and one request asserted. |
@@ -138,10 +140,10 @@ PASS reflects the stated evidence boundary. Mock/API/component evidence is not a
 | 102 | BLOCKED | Deliberately correct one field and confirm correction persists. | BLOCKED: awaiting Product Owner Windows real-paper / real-provider walkthrough in docs/phase2b1-manual-acceptance.md. No waiver received. |
 | 103 | BLOCKED | Ask at least two paper-scoped questions and confirm citations point into the same paper. | BLOCKED: awaiting Product Owner Windows real-paper / real-provider walkthrough in docs/phase2b1-manual-acceptance.md. No waiver received. |
 | 104 | BLOCKED | Run a small 3–5 paper batch and confirm one bad/unsupported item does not abort the others. | BLOCKED: awaiting Product Owner Windows real-paper / real-provider walkthrough in docs/phase2b1-manual-acceptance.md. No waiver received. |
-| 105 | BLOCKED | Windows CI passes backend tests. | BLOCKED: matching GitHub Actions run pending publication; local suites/build passed. |
-| 106 | BLOCKED | Windows CI passes frontend tests. | BLOCKED: matching GitHub Actions run pending publication; local suites/build passed. |
-| 107 | PASS | Windows portable build succeeds. | Local build-windows.ps1 succeeds; frozen sidecar synthetic import/extract/Ask smoke passes. Matching Windows CI pending. |
-| 108 | BLOCKED | Build artifact is uploaded. | BLOCKED: matching GitHub Actions run pending publication; local suites/build passed. |
+| 105 | PASS | Windows CI passes backend tests. | Windows CI 38219956334 succeeded at c0a682e; final follow-up validation is linked in the PR. |
+| 106 | PASS | Windows CI passes frontend tests. | Windows CI 38219956334 succeeded at c0a682e; final follow-up validation is linked in the PR. |
+| 107 | PASS | Windows portable build succeeds. | Local build-windows.ps1 succeeds; frozen sidecar synthetic import/extract/Ask smoke passes. Windows CI 38219956334 also passed packaging and frozen smoke. |
+| 108 | PASS | Build artifact is uploaded. | Windows CI 38219956334 succeeded at c0a682e; final follow-up validation is linked in the PR. |
 
 ## Known limits and manual review
 

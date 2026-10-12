@@ -86,3 +86,48 @@ it("opens a saved material at its original file, page and highlight", async () =
   ).toBeInTheDocument();
   expect(api).toHaveBeenCalledWith("/works/3");
 });
+
+it("opens Library intelligence and selected-paper batch controls", async () => {
+  vi.mocked(api).mockImplementation(async (path: string) => {
+    if (path === "/health") return { data_dir: "test" } as never;
+    if (path.startsWith("/works?library"))
+      return [
+        {
+          id: 7,
+          title: "Catalyst paper",
+          authors: [],
+          year: 2024,
+          files: [],
+          sources: [],
+          oa_locations: [],
+          tags: [],
+          collections: [],
+          notes: "",
+          in_library: true,
+          status: "unread",
+          starred: false,
+          intelligence: { parse_status: "Not parsed", review_status: null },
+        },
+      ] as never;
+    if (path === "/intelligence/works/7")
+      return { documents: [], extractions: [], questions: [] } as never;
+    return [] as never;
+  });
+  render(<App />);
+  fireEvent.click(screen.getByRole("button", { name: /02Library/ }));
+  fireEvent.click(await screen.findByRole("button", { name: "Intelligence" }));
+  expect(await screen.findByRole("dialog")).toHaveTextContent(
+    "Catalyst paper · Intelligence",
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Close" }));
+  await waitFor(() =>
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
+  );
+  fireEvent.click(screen.getByRole("checkbox"));
+  expect(
+    await screen.findByText("Paper processing · 1 selected"),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByRole("button", { name: "Start selected processing" }),
+  ).toBeInTheDocument();
+});
