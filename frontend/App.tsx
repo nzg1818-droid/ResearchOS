@@ -22,6 +22,15 @@ import Zotero from "./Zotero";
 import StorageSettings from "./StorageSettings";
 import ExportButton from "./ExportButton";
 import { api, openLink } from "./api";
+import type { EvidenceAnchor } from "./Intelligence";
+const Intelligence = lazy(() => import("./Intelligence"));
+const BatchIntelligence = lazy(() =>
+  import("./Intelligence").then((m) => ({ default: m.BatchIntelligence })),
+);
+const IntelligenceTask = lazy(() =>
+  import("./Intelligence").then((m) => ({ default: m.IntelligenceTask })),
+);
+const AISettings = lazy(() => import("./AISettings"));
 const Reader = lazy(() => import("./Reader"));
 import type { Attachment, Job, Location, Material, Work } from "./types";
 const sections = [
@@ -42,6 +51,7 @@ export default function App() {
     () => localStorage.getItem("researchos.library.filters") !== "false",
   );
   const [sources, setSources] = useState(["openalex", "crossref"]);
+  const [intelligenceWork, setIntelligenceWork] = useState<Work | null>(null);
   const [checked, setChecked] = useState<number[]>([]);
   const [palette, setPalette] = useState(false);
   const [paletteQuery, setPaletteQuery] = useState("");
@@ -74,6 +84,7 @@ export default function App() {
       file: Attachment;
       page: number;
       focusId?: number;
+      evidence?: EvidenceAnchor;
     }>(),
     [error, setError] = useState(""),
     [message, setMessage] = useState(""),
@@ -215,6 +226,18 @@ export default function App() {
     setReader({ file, page, focusId });
     setSelected(null);
     setView("Reader");
+  };
+  const openEvidence = async (a: EvidenceAnchor) => {
+    try {
+      const work = await api<Work>(`/works/${a.work_id}`);
+      const file = work.files.find((f) => f.id === a.file_id);
+      if (!file || !a.page) throw new Error("Evidence PDF not available");
+      setIntelligenceWork(null);
+      setReader({ file, page: a.page, evidence: a });
+      setView("Reader");
+    } catch (e) {
+      fail(e);
+    }
   };
   const backlink = async (m: Material) => {
     try {
@@ -606,6 +629,10 @@ export default function App() {
                                   : "No PDF"
                             }
                           />
+                          <Chip
+                            size="small"
+                            label={`${w.intelligence?.parse_status || "Not parsed"} · ${w.intelligence?.review_status || "No extraction"}`}
+                          />
                           {w.sources.map((s) => (
                             <Chip
                               key={s}
@@ -702,6 +729,12 @@ export default function App() {
                       ))}
                       <Button size="small" onClick={() => setSelected(w)}>
                         Details & notes
+                      </Button>
+                      <Button
+                        size="small"
+                        onClick={() => setIntelligenceWork(w)}
+                      >
+                        Intelligence
                       </Button>
                     </Stack>
                   </CardContent>
@@ -850,6 +883,22 @@ export default function App() {
                       {j.result.imports &&
                         `${j.result.imports.length} PDFs processed`}
                     </Typography>
+                    {j.kind === "intelligence" && (
+                      <Suspense fallback={<LinearProgress />}>
+                        <p>
+                          {j.request?.provider_label} ·{" "}
+                          {j.request?.cloud ? "Cloud" : "Local"}
+                        </p>
+                        <IntelligenceTask id={j.id} />
+                        {Object.entries(j.result.papers || {}).map(
+                          ([id, p]) => (
+                            <p key={id}>
+                              Work #{id}: {p.state} {p.error || ""}
+                            </p>
+                          ),
+                        )}
+                      </Suspense>
+                    )}
                     {j.error && <Alert severity="error">{j.error}</Alert>}
                     {j.result.errors &&
                       Object.keys(j.result.errors).length > 0 && (
@@ -857,23 +906,24 @@ export default function App() {
                           {JSON.stringify(j.result.errors, null, 2)}
                         </pre>
                       )}
-                    {!["running", "queued"].includes(j.state) && (
-                      <Button
-                        onClick={async () => {
-                          try {
-                            const r = await api<{ job_id: number }>(
-                              `/jobs/${j.id}/retry`,
-                              "POST",
-                            );
-                            setActiveJob(r.job_id);
-                          } catch (e) {
-                            fail(e);
-                          }
-                        }}
-                      >
-                        Retry task
-                      </Button>
-                    )}
+                    {j.kind !== "intelligence" &&
+                      !["running", "queued"].includes(j.state) && (
+                        <Button
+                          onClick={async () => {
+                            try {
+                              const r = await api<{ job_id: number }>(
+                                `/jobs/${j.id}/retry`,
+                                "POST",
+                              );
+                              setActiveJob(r.job_id);
+                            } catch (e) {
+                              fail(e);
+                            }
+                          }}
+                        >
+                          Retry task
+                        </Button>
+                      )}
                   </CardContent>
                 </Card>
               ))}
@@ -894,6 +944,9 @@ export default function App() {
                 </div>
               </div>
               <StorageSettings />
+              <Suspense fallback={<LinearProgress />}>
+                <AISettings />
+              </Suspense>
               <Card variant="outlined">
                 <CardContent>
                   <Typography variant="h6">OpenAlex access</Typography>

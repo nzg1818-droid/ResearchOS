@@ -36,17 +36,19 @@ vi.mock("pdfjs-dist", () => ({
 vi.mock("./api", () => ({
   config: async () => ({ base: "http://localhost", token: "test" }),
   api: async (path: string) =>
-    path.startsWith("/works/")
-      ? {
-          title: "Test paper",
-          authors: ["Alice"],
-          notes: "",
-          tags: [],
-          files: [],
-          sources: [],
-          oa_locations: [],
-        }
-      : [],
+    path.startsWith("/intelligence/works/")
+      ? { documents: [], extractions: [], questions: [] }
+      : path.startsWith("/works/")
+        ? {
+            title: "Test paper",
+            authors: ["Alice"],
+            notes: "",
+            tags: [],
+            files: [],
+            sources: [],
+            oa_locations: [],
+          }
+        : [],
 }));
 const file: Attachment = {
   id: 1,
@@ -130,4 +132,42 @@ it("finds text throughout the PDF and navigates next/previous results", async ()
   expect(screen.getByTestId("pdf-page")).toHaveAttribute("data-page", "2");
   fireEvent.click(screen.getByRole("button", { name: "Previous match" }));
   expect(screen.getByTestId("pdf-page")).toHaveAttribute("data-page", "1");
+});
+
+it("keeps paper-intelligence evidence geometry aligned while zooming", async () => {
+  render(
+    <Reader
+      file={file}
+      initialPage={2}
+      evidence={{
+        id: 1,
+        work_id: 1,
+        file_id: 1,
+        page: 2,
+        field_path: "performance",
+        quote: "evidence",
+        bboxes: [{ page: 2, rect: [0.1, 0.2, 0.4, 0.3] }],
+      }}
+      onSaved={() => {}}
+    />,
+  );
+  await waitFor(() =>
+    expect(screen.getByTestId("pdf-page")).toHaveAttribute(
+      "data-ready",
+      "true",
+    ),
+  );
+  const highlight = screen.getByTestId("intelligence-highlight");
+  expect(highlight.style.left).toBe("10%");
+  expect(highlight.style.top).toBe("20%");
+  fireEvent.click(screen.getByRole("button", { name: "Zoom in" }));
+  await waitFor(() =>
+    expect(screen.getByTestId("pdf-page")).toHaveAttribute(
+      "data-ready",
+      "true",
+    ),
+  );
+  expect(highlight.style.left).toBe("10%");
+  expect(screen.getByTestId("pdf-page")).toHaveAttribute("data-page", "2");
+  expect(screen.getByRole("button", { name: "Ask Paper" })).toBeInTheDocument();
 });

@@ -49,7 +49,7 @@ def create_app(data_dir=None, token=None):
 
     app = FastAPI(title='ResearchOS', lifespan=lifespan, dependencies=[Depends(authorize)])
     app.state.sessions, app.state.data = sessions, data
-    app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173', 'null'], allow_methods=['GET','POST','PATCH','DELETE'], allow_headers=['Content-Type','X-ResearchOS-Token'])
+    app.add_middleware(CORSMiddleware, allow_origins=['http://127.0.0.1:5173', 'http://localhost:5173', 'null'], allow_methods=['GET','POST','PUT','PATCH','DELETE'], allow_headers=['Content-Type','X-ResearchOS-Token'])
 
     def required(session, cls, id):
         item = session.get(cls, id)
@@ -64,6 +64,10 @@ def create_app(data_dir=None, token=None):
         result['files'] = [{k:v for k,v in columns(f).items() if k != 'path'} for f in session.scalars(select(File).where(File.work_id == w.id))]
         result['sources'] = sorted(set(session.scalars(select(SourceHit.source).where(SourceHit.work_id == w.id))))
         result['collections'] = list(session.scalars(select(CollectionWork.collection_id).where(CollectionWork.work_id == w.id)))
+        from .intelligence.models import Document, Extraction, ExtractionRun
+        document=session.scalar(select(Document).where(Document.work_id==w.id).order_by(Document.id.desc()))
+        extraction=session.scalar(select(Extraction).join(ExtractionRun).where(ExtractionRun.work_id==w.id).order_by(Extraction.id.desc()))
+        result['intelligence']={'parse_status':document.parse_status if document else 'Not parsed','review_status':extraction.verification_status if extraction else None}
         result['zotero'] = []
         for state in session.scalars(select(SyncState).where(SyncState.work_id==w.id)):
             status=state.status
@@ -133,7 +137,7 @@ def create_app(data_dir=None, token=None):
         return {'job_id': id}
 
     @app.get('/health')
-    def health(): return {'status': 'ok', 'version': '0.2.0', 'data_dir': str(data)}
+    def health(): return {'status': 'ok', 'version': '0.3.0', 'data_dir': str(data)}
 
     @app.get('/search-runs')
     def search_runs():
@@ -158,6 +162,7 @@ def create_app(data_dir=None, token=None):
     async def retry(id: int):
         with sessions() as s:
             j = required(s, Job, id)
+            if j.kind == 'intelligence': raise HTTPException(422, 'Use intelligence task controls to renew consent and resume safely')
             if j.state in ('queued', 'running'): raise HTTPException(409, 'Task is already running')
             return submit(j.kind, j.request)
 
@@ -300,4 +305,6 @@ def create_app(data_dir=None, token=None):
 
     from .phase2_api import register
     register(app,sessions,data,write_lock)
+    from .intelligence.api import register as register_intelligence
+    register_intelligence(app, sessions, data, write_lock, tasks)
     return app

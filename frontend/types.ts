@@ -25,6 +25,7 @@ export type Work = {
   tags: string[];
   collections: number[];
   files: Attachment[];
+  intelligence?: { parse_status: string; review_status: string | null };
   zotero?: {
     id: number;
     library_id: number;
@@ -71,6 +72,7 @@ export type Material = {
 export type Job = {
   id: number;
   kind: string;
+  request?: { provider_label?: string; cloud?: boolean };
   state: string;
   progress: number;
   error: string | null;
@@ -79,6 +81,7 @@ export type Job = {
     errors?: Record<string, string> | { file: string; error: string }[];
     source_counts?: Record<string, number>;
     imports?: unknown[];
+    papers?: Record<string, { state: string; error?: string }>;
   };
 };
 declare global {

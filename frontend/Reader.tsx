@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, lazy, Suspense } from "react";
 import {
   Alert,
   Button,
@@ -14,26 +14,35 @@ import "pdfjs-dist/web/pdf_viewer.css";
 import { api, config } from "./api";
 import { readLayout, selectionContext, rotateRect } from "./reader-layout";
 import type { Annotation, Attachment, Rect, Work, Material } from "./types";
+import type { EvidenceAnchor } from "./Intelligence";
+const Intelligence = lazy(() => import("./Intelligence"));
 pdfjs.GlobalWorkerOptions.workerSrc = worker;
 export default function Reader({
   file,
   initialPage = 1,
   focusId,
+  evidence,
+  onEvidenceFile,
   onSaved,
   onBack,
 }: {
   file: Attachment;
   initialPage?: number;
   focusId?: number;
+  evidence?: EvidenceAnchor;
+  onEvidenceFile?: (a: EvidenceAnchor) => void;
   onSaved: () => void;
   onBack?: () => void;
 }) {
+  const [intelligenceFocus, setIntelligenceFocus] = useState<
+    EvidenceAnchor | undefined
+  >(evidence);
   const [activeFocus, setActiveFocus] = useState(focusId);
   const [layout, setLayout] = useState(readLayout),
     [zen, setZen] = useState(false),
     [toolbar, setToolbar] = useState(true);
   const [leftTab, setLeftTab] = useState("Outline"),
-    [rightTab, setRightTab] = useState("Evidence");
+    [rightTab, setRightTab] = useState(evidence ? "Intelligence" : "Evidence");
   const [rotation, setRotation] = useState(0),
     [fit, setFit] = useState<"manual" | "width" | "page">("manual");
   const [find, setFind] = useState(""),
@@ -578,6 +587,33 @@ export default function Reader({
           >
             <canvas ref={canvas} />
             <div ref={textLayer} className="textLayer" />
+            {intelligenceFocus?.bboxes
+              .filter((b) => b.page === page)
+              .map((b, i) => {
+                const r = rotateRect(
+                  {
+                    x: b.rect[0],
+                    y: b.rect[1],
+                    width: b.rect[2] - b.rect[0],
+                    height: b.rect[3] - b.rect[1],
+                  },
+                  rotation,
+                );
+                return (
+                  <div
+                    key={`ai-${i}`}
+                    data-testid="intelligence-highlight"
+                    className="highlight focused"
+                    title={intelligenceFocus.quote}
+                    style={{
+                      left: `${r.x * 100}%`,
+                      top: `${r.y * 100}%`,
+                      width: `${r.width * 100}%`,
+                      height: `${r.height * 100}%`,
+                    }}
+                  />
+                );
+              })}
             {annotations
               .filter((a) => a.page === page)
               .flatMap((a) =>
@@ -622,18 +658,44 @@ export default function Reader({
               />
             </label>
             <Stack direction="row" flexWrap="wrap">
-              {["Evidence", "Notes", "Metadata", "Materials", "Zotero"].map(
-                (t) => (
-                  <Button
-                    key={t}
-                    variant={rightTab === t ? "contained" : "text"}
-                    onClick={() => setRightTab(t)}
-                  >
-                    {t}
-                  </Button>
-                ),
-              )}
+              {[
+                "Evidence",
+                "Notes",
+                "Metadata",
+                "Materials",
+                "Zotero",
+                "Intelligence",
+                "Ask Paper",
+              ].map((t) => (
+                <Button
+                  key={t}
+                  variant={rightTab === t ? "contained" : "text"}
+                  onClick={() => setRightTab(t)}
+                >
+                  {t}
+                </Button>
+              ))}
             </Stack>
+            {["Intelligence", "Ask Paper"].includes(rightTab) && (
+              <Suspense fallback={<p>Loading intelligence…</p>}>
+                <Intelligence
+                  workId={file.work_id}
+                  askOnly={rightTab === "Ask Paper"}
+                  onSaved={onSaved}
+                  onEvidence={(a) => {
+                    if (a.file_id !== file.id) {
+                      onEvidenceFile?.(a);
+                      return;
+                    }
+                    if (a.page) {
+                      setPage(a.page);
+                      setIntelligenceFocus(a);
+                      setLayout((l) => ({ ...l, right: true, focus: false }));
+                    }
+                  }}
+                />
+              </Suspense>
+            )}
             {rightTab === "Metadata" && paper && (
               <>
                 <h3>{paper.title}</h3>
