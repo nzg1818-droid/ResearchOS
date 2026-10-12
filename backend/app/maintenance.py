@@ -48,7 +48,7 @@ def backup(session,root,destination):
 def validate_backup(path):
     with zipfile.ZipFile(path) as archive:
         manifest=json.loads(archive.read('manifest.json'))
-        if manifest.get('format')!='ResearchOS-backup' or manifest.get('version')!=1 or manifest.get('schema_version')!='0002':raise ValueError('Unsupported backup/schema version')
+        if manifest.get('format')!='ResearchOS-backup' or manifest.get('version')!=1 or manifest.get('schema_version') not in ('0002','0003'):raise ValueError('Unsupported backup/schema version')
         expected={'manifest.json','researchos.db'}
         db=manifest['database']
         if db['path']!='researchos.db':raise ValueError('Invalid database inventory')

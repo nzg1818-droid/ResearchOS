@@ -107,6 +107,7 @@ class Job(Base):
 
 def initialize(data: Path):
     from . import phase2_models
+    from .intelligence import models
     import sqlite3
     from contextlib import closing
     data = data.resolve()
@@ -116,8 +117,8 @@ def initialize(data: Path):
     if database.exists():
         with closing(sqlite3.connect(database)) as old:
             version = old.execute("SELECT version_num FROM alembic_version").fetchone()
-            if version and version[0] == '0001':
-                backup = data / 'migration-backups' / (now().replace(':','-') + '-0001.db')
+            if version and version[0] in ('0001', '0002'):
+                backup = data / 'migration-backups' / (now().replace(':','-') + '-' + version[0] + '.db')
                 backup.parent.mkdir(exist_ok=True)
                 with closing(sqlite3.connect(backup)) as target: old.backup(target)
     engine = create_engine('sqlite:///' + (data / 'researchos.db').as_posix(), connect_args={'check_same_thread': False, 'timeout': 30})
