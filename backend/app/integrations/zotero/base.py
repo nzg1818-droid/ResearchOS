@@ -35,6 +35,8 @@ class ZoteroAPI:
         except httpx.HTTPError:
             raise ZoteroError(503,'Zotero connection failed; check endpoint/network and try again') from None
         if response.status_code>=400:
+            if self.local and method != 'GET' and response.status_code == 401:
+                raise ZoteroError(401, 'Re-authorize Zotero Local write access')
             messages={401:'Zotero authorization expired or invalid',403:'Zotero access denied; check API permissions',404:'Zotero item or library not found',412:'Zotero changed since the last read; refresh and resolve conflict',413:'Zotero storage quota or upload limit exceeded',429:'Zotero rate limit; retry later'}
             raise ZoteroError(response.status_code,messages.get(response.status_code,f'Zotero request failed ({response.status_code})'))
         self.version=max(self.version,int(response.headers.get('Last-Modified-Version',0)))

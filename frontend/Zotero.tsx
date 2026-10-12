@@ -121,7 +121,7 @@ export default function Zotero({
         <TextField
           select
           label="Connection"
-          value={connection}
+          value={current ? connection : ""}
           onChange={(e) => setConnection(e.target.value)}
           sx={{ minWidth: 300 }}
         >
@@ -215,6 +215,27 @@ export default function Zotero({
             onChange={(e) => setKey(e.target.value)}
             helperText="Saved only in the OS credential store. Leave blank to retain an existing key."
           />
+          {mode === "web" && (
+            <Button
+              disabled={busy || !key}
+              onClick={() =>
+                void run(async () => {
+                  const detected = await api<{
+                    user_id: string;
+                    username: string;
+                    permissions: unknown;
+                  }>("/zotero/identify", "POST", { key });
+                  setLibraryType("user");
+                  setLibraryId(detected.user_id);
+                  setMessage(
+                    `Account: ${detected.username} · User ID: ${detected.user_id} · Permissions: ${JSON.stringify(detected.permissions)}. Save connection to use this account.`,
+                  );
+                })
+              }
+            >
+              Use API key to identify account
+            </Button>
+          )}
           <Button
             disabled={busy}
             variant="contained"
@@ -451,16 +472,16 @@ export default function Zotero({
                 const work_ids = ids.split(",").map((x) => Number(x.trim()));
                 if (work_ids.some((x) => !Number.isInteger(x) || x < 1))
                   throw new Error("Enter valid Work IDs");
-                  try {
-                    await api(`/zotero/${connection}/push`, "POST", {
-                      work_ids,
-                      collection: destination || null,
-                      note: sendNote,
-                      pdf: sendPdf,
-                    });
-                  } finally {
-                    await loadStates();
-                  }
+                try {
+                  await api(`/zotero/${connection}/push`, "POST", {
+                    work_ids,
+                    collection: destination || null,
+                    note: sendNote,
+                    pdf: sendPdf,
+                  });
+                } finally {
+                  await loadStates();
+                }
                 setMessage("Push finished. Review status below.");
               })
             }

@@ -222,3 +222,32 @@ def test_upload_three_steps_checksum_and_no_credentials_to_storage(tmp_path):
     adapter=ZoteroWeb('user','123','CANARY',transport=httpx.MockTransport(route))
     asyncio.run(adapter.upload('ATTACH01',pdf,pdf.name))
     assert steps==['authorize','bytes','register']
+
+
+def test_account_introspection_allowlists_response(environment):
+    client, server, app, secrets = environment
+    def route(request):
+        assert str(request.url) == 'https://api.zotero.org/keys/current'
+        assert request.headers['Zotero-API-Key'] == 'PRIVATE-KEY-CANARY'
+        return httpx.Response(200, json={'userID': 42, 'username': 'researcher', 'key': 'PRIVATE-KEY-CANARY', 'access': {'user': {'library': True, 'write': True}}})
+    app.state.zotero_transport = httpx.MockTransport(route)
+    response = client.post('/zotero/identify', json={'key': 'PRIVATE-KEY-CANARY'})
+    assert response.status_code == 200
+    assert response.json()['user_id'] == '42'
+    assert 'PRIVATE-KEY-CANARY' not in response.text
+    assert not secrets
+
+
+def test_local_write_auth_expiry_is_actionable_without_retry():
+    import asyncio
+    from app.integrations.zotero.local import ZoteroLocal
+    from app.integrations.zotero.base import ZoteroError
+    calls = []
+    def route(request):
+        calls.append(request)
+        return httpx.Response(401)
+    adapter = ZoteroLocal('http://127.0.0.1:23119/api', key='expired', transport=httpx.MockTransport(route))
+    adapter.writable = True
+    with pytest.raises(ZoteroError, match='Re-authorize Zotero Local write access'):
+        asyncio.run(adapter.request('POST', '/items', json=[]))
+    assert len(calls) == 1

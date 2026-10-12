@@ -26,6 +26,8 @@ class ConnectionInput(BaseModel):
     key:SecretStr|None=None
 class ImportInput(BaseModel):
     collections:list[str]=Field(default_factory=list)
+class IdentifyInput(BaseModel):
+    key:SecretStr
 class PushInput(BaseModel):
     work_ids:list[int]=Field(min_length=1,max_length=1000)
     collection:str|None=None
@@ -66,6 +68,12 @@ def register(app,sessions,root,write_lock):
             # Identity partitions local DBs from each other and from Web versions.
             library.server_id=status.server_id
         return status
+
+    @app.post('/zotero/identify')
+    async def identify(body:IdentifyInput):
+        from .integrations.zotero.web import ZoteroWeb
+        adapter=ZoteroWeb('user','0',body.key.get_secret_value(),transport=getattr(app.state,'zotero_transport',None))
+        return await adapter.identify()
 
     @app.get('/zotero/connections')
     def connections():
