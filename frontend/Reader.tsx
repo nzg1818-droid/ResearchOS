@@ -358,11 +358,11 @@ export default function Reader({
     localStorage.setItem("researchos.pdf.zoom", String(scale));
   }, [scale]);
   useEffect(() => {
-    if (!rendering && activeFocus)
+    if (!rendering && (activeFocus || intelligenceFocus))
       pageEl.current
         ?.querySelector(".highlight.focused")
         ?.scrollIntoView({ block: "center", inline: "center" });
-  }, [rendering, activeFocus, annotations]);
+  }, [rendering, activeFocus, annotations, intelligenceFocus]);
   const save = async (kind: string) => {
     if (!selected) return;
     setBusy(true);

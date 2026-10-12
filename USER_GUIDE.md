@@ -37,3 +37,18 @@ An optional OpenAlex key can raise provider usage allowances. Save it in Setting
 Settings displays the data folder. Exit the app, then copy the entire folder (including PDFs and database) for backup. Debug logs rotate locally. To restore, close the app and restore the folder before relaunching.
 
 Phase 2 extraction, Zotero, semantic search and dashboards are not available in this version.
+
+
+## Phase 2B1: Paper Intelligence
+
+1. In Library, select one or more papers. `Parse documents` uses the local parser; it does not contact any AI service. Open Intelligence to inspect Parsed, Abstract only, Needs OCR or Parse failed status.
+2. Settings → AI: add an HTTPS OpenAI-compatible endpoint (normally its `/v1` base URL), loopback Ollama endpoint, or Mock for a deterministic smoke check. Set model, timeout, output budget and concurrency. Enter credentials only here. Test connection lists whether the configured model is available. Mock is a testing aid, not a scientific model.
+3. Choose Extract abstracts or Extract full text. For a cloud provider, preview input size and explicitly consent to the selected papers. Parse first for full-text counts. No cloud work runs automatically. Identical successful results use the cache; Force new extraction overrides reuse.
+4. Reader → Intelligence displays structured sections, origin, confidence, status and source pages. `Show evidence` focuses source coordinates. Evidence matched means a deterministic source match, not independent scientific verification. Verify, Edit or Reject each field; add a note. A numeric mismatch cannot be accepted until it is corrected to match its source. Original output stays in audit history. Save verified fields to Knowledge with PDF evidence.
+5. Reader → Ask Paper retrieves only this Work. Without a provider, it returns explicitly labeled source excerpts. AI answers require a selected provider and renewed cloud consent when remote. Inspect snippets and clickable page references. Missing evidence returns Not found in this paper. Only answers with PDF evidence can be saved to Knowledge.
+6. Tasks displays per-paper progress and provider/model/cloud context. Pause/cancel stops scheduling new papers, allowing current requests to finish safely. Resume/retry continues the same task, skips completed papers and retries failures; cloud tasks require renewed consent. Interrupted tasks remain recoverable after restart.
+7. Export intelligence JSON/CSV for the current or selected papers. Both retain IDs and evidence references; CSV is a flattened table of fields including individual performance measurements.
+
+Unknown values remain unknown. Abstract extraction deliberately excludes detailed synthesis, electrochemistry and numeric performance settings. No RHE conversion, interpolation, OCR or cross-paper ranking is performed. Ex-situ-only mechanism evidence is limited explicitly. Keep original PDFs in reach while reviewing AI output.
+
+Zotero onboarding now supports `Use API key to identify account`, showing username, user ID and permissions before Save. An expired local write key prompts re-authorization rather than retrying authorization automatically.

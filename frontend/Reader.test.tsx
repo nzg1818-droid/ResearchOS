@@ -59,6 +59,7 @@ const file: Attachment = {
 };
 beforeEach(() => {
   localStorage.clear();
+  HTMLElement.prototype.scrollIntoView = vi.fn();
   renderPage.mockClear();
   fullscreen.mockClear();
   window.desktop = { fullscreen } as never;

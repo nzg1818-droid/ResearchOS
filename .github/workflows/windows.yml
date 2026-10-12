@@ -1,4 +1,4 @@
-name: Windows Phase 2A checks
+name: Windows Phase 2B1 checks
 on: [push, pull_request, workflow_dispatch]
 permissions:
   contents: read
@@ -28,7 +28,9 @@ jobs:
       - name: Windows portable build
         shell: pwsh
         run: ./scripts/build-windows.ps1
+      - name: Frozen sidecar smoke
+        run: .venv/Scripts/python.exe scripts/verify_phase2b1_package.py
       - uses: actions/upload-artifact@v4
         with:
           name: ResearchOS-Windows-x64
-          path: release/ResearchOS-0.2.0-win-x64.zip*
+          path: release/ResearchOS-0.3.0-win-x64.zip*

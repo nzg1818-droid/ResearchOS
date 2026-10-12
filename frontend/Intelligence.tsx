@@ -27,6 +27,7 @@ type Provider = {
   cloud: boolean;
   enabled: boolean;
   is_default: boolean;
+  default_level?: string;
 };
 type FieldValue = {
   value: string | number | null;
@@ -85,7 +86,7 @@ export function BatchIntelligence({
   onStarted,
 }: {
   workIds: number[];
-  onStarted?: () => void;
+  onStarted?: (jobId: number) => void;
 }) {
   const [providers, setProviders] = useState<Provider[]>([]),
     [providerId, setProviderId] = useState("");
@@ -105,6 +106,8 @@ export function BatchIntelligence({
       .then((p) => {
         setProviders(p);
         setProviderId(String(p.find((c) => c.is_default)?.id || ""));
+        if (p.find((c) => c.is_default)?.default_level)
+          setAction(p.find((c) => c.is_default)!.default_level!);
       })
       .catch((e) => setError(String(e)));
   }, []);
@@ -242,7 +245,7 @@ export function BatchIntelligence({
               `Task ${r.job_id} started. Progress and pause/retry controls are in Tasks.`,
             );
             setConsent(false);
-            onStarted?.();
+            onStarted?.(r.job_id);
           } catch (e) {
             setError(String(e));
           }

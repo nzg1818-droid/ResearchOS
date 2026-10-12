@@ -1,0 +1,652 @@
+{
+  "one_minute_brief": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "research_question": {
+    "value": "Can a NiFe catalyst support alkaline oxygen evolution?",
+    "origin": "source_reported",
+    "confidence": 0.8,
+    "evidence": [
+      {
+        "chunk_id": "fixture-abstract",
+        "quote": "We evaluate a NiFe catalyst for alkaline oxygen evolution.",
+        "page": 1
+      }
+    ],
+    "formula": null,
+    "inputs": {}
+  },
+  "study_objective": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "paper_type": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "highlights": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "limitations": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "unresolved_questions": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "industrial_relevance": {
+    "value": null,
+    "origin": "source_reported",
+    "confidence": 0.0,
+    "evidence": [],
+    "formula": null,
+    "inputs": {}
+  },
+  "materials": [
+    {
+      "canonical_name": {
+        "value": "NiFe catalyst",
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [
+          {
+            "chunk_id": "fixture-abstract",
+            "quote": "We evaluate a NiFe catalyst for alkaline oxygen evolution.",
+            "page": 1
+          }
+        ],
+        "formula": null,
+        "inputs": {}
+      },
+      "composition": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "dopants": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "support": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "morphology": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "phase": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "structural_order": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "interface": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "role": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      }
+    }
+  ],
+  "synthesis": [
+    {
+      "method": {
+        "value": "electrodeposition",
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [
+          {
+            "chunk_id": "fixture-methods",
+            "quote": "The catalyst was prepared by electrodeposition.",
+            "page": 2
+          }
+        ],
+        "formula": null,
+        "inputs": {}
+      },
+      "precursors": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "concentrations": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "solvent": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "potential": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "current": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "current_density": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "reference_electrode": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "time": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "temperature": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "pressure": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "atmosphere": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "ph": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "annealing": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "phosphidation": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "sulfidation": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "nitridation": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "scale": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "notes": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      }
+    }
+  ],
+  "characterization": [],
+  "electrochemistry": [
+    {
+      "reaction": {
+        "value": "OER",
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "cell_type": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "electrolyte": {
+        "value": "1 M KOH",
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "koh_original": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "koh_normalized": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "temperature": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "pressure": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "flow": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "working_electrode": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "counter_electrode": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "reference_electrode": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "reference_conversion": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "geometric_area": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "loading": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "normalization_basis": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "ir_correction": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "ir_percentage": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "ir_method": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "scan_rate": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "rotation": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      }
+    }
+  ],
+  "performance": [
+    {
+      "metric": {
+        "value": "overpotential",
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "reported_value": {
+        "value": 250,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [
+          {
+            "chunk_id": "fixture-performance",
+            "quote": "The overpotential was 250 mV at 100 mA cm-2 in 1 M KOH.",
+            "page": 3
+          }
+        ],
+        "formula": null,
+        "inputs": {}
+      },
+      "reported_unit": {
+        "value": "mV",
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "normalized_value": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "normalized_unit": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "current_density": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "potential": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "overpotential": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "cell_voltage": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "duration": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "product": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "faradaic_efficiency": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "selectivity": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "yield_conversion": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "tafel_slope": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "rct": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "cdl_ecsa": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "retention": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "normalization_basis": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      },
+      "condition_reference": {
+        "value": null,
+        "origin": "source_reported",
+        "confidence": 0.0,
+        "evidence": [],
+        "formula": null,
+        "inputs": {}
+      }
+    }
+  ],
+  "mechanism": []
+}

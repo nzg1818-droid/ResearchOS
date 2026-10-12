@@ -58,6 +58,7 @@ class HTTPProvider:
         if r.status_code in (401,403):raise ProviderError('Provider auth error; update the key in AI settings')
         if r.status_code==429:raise ProviderError('Provider rate limit; retry later')
         if r.status_code>=300:raise ProviderError('Provider request failed ('+str(r.status_code)+')')
+        if secret and secret in r.text:raise ProviderError('Provider response contained credential material and was discarded')
         try:return r.json()
         except ValueError:raise ProviderError('Invalid structured output') from None
     async def health(self):

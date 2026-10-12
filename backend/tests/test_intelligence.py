@@ -250,3 +250,64 @@ def test_metadata_abstract_levels_and_restart_review(intelligence):
         assert restored['decisions'][0]['created_at']
         assert s.get(Extraction,e['id']).payload==e['payload']
     engine.dispose()
+
+
+def test_mismatched_output_never_becomes_verified(intelligence,monkeypatch):
+    from app.intelligence.providers import MockProvider
+    client,app,id,secrets=intelligence
+    original=MockProvider.structured
+    async def mismatch(self,system,payload,schema):
+        result=await original(self,system,payload,schema)
+        if result.content.get('performance'):result.content['performance'][0]['reported_value']['value']=999
+        return result
+    monkeypatch.setattr(MockProvider,'structured',mismatch)
+    cfg=client.post('/intelligence/providers',json={'name':'Mock','provider_type':'mock','model':'test'}).json()
+    run_batch(client,[id],'full_text',provider_id=cfg['id'])
+    e=client.get(f'/intelligence/works/{id}').json()['extractions'][0];path='performance.0.reported_value'
+    assert e['field_states'][path]['status']=='Needs review'
+    assert client.post(f"/intelligence/extractions/{e['id']}/verify",json={'field_path':path,'action':'accept'}).status_code==422
+    rejected=client.post(f"/intelligence/extractions/{e['id']}/verify",json={'field_path':path,'action':'reject','note':'Source says 250'})
+    assert rejected.json()['field_states'][path]['status']=='Rejected'
+    corrected=client.post(f"/intelligence/extractions/{e['id']}/verify",json={'field_path':path,'action':'edit','value':250})
+    assert corrected.status_code==200
+    assert corrected.json()['payload']['performance'][0]['reported_value']['value']==999
+    assert corrected.json()['effective']['performance'][0]['reported_value']['value']==250
+
+def test_all_verified_full_text_promotes_without_losing_run(intelligence):
+    from app.intelligence.schema import fields
+    client,app,id,secrets=intelligence
+    cfg=client.post('/intelligence/providers',json={'name':'Mock','provider_type':'mock','model':'test'}).json()
+    run_batch(client,[id],'full_text',provider_id=cfg['id'])
+    e=client.get(f'/intelligence/works/{id}').json()['extractions'][0]
+    for path,field in fields(e['effective']):
+        if field['value'] is not None:
+            r=client.post(f"/intelligence/extractions/{e['id']}/verify",json={'field_path':path,'action':'accept'})
+            assert r.status_code==200,r.text
+    v=client.get(f'/intelligence/works/{id}').json()['extractions'][0]
+    assert v['run']['extraction_level']=='full_text_verified'
+    assert v['run']['id']==e['run']['id'] and v['payload']==e['payload']
+
+def test_pause_cancel_and_resume_batch(intelligence,monkeypatch):
+    import asyncio,time
+    from app.intelligence.providers import MockProvider
+    client,app,id,secrets=intelligence
+    cfg=client.post('/intelligence/providers',json={'name':'Mock','provider_type':'mock','model':'test','concurrency':1}).json()
+    original=MockProvider.structured
+    async def slow(self,*args):
+        await asyncio.sleep(.02)
+        return await original(self,*args)
+    monkeypatch.setattr(MockProvider,'structured',slow)
+    ids=[id]
+    with app.state.sessions.begin() as s:
+        for index in range(4):
+            w=Work(title=f'Batch abstract {index}',authors=[]);s.add(w);s.flush();ids.append(w.id)
+            s.add(SourceHit(work_id=w.id,source='fixture',raw={'abstract':'Catalyst abstract'}))
+        s.add(SourceHit(work_id=id,source='fixture',raw={'abstract':'Catalyst abstract'}))
+    job=client.post('/intelligence/batches',json={'work_ids':ids,'action':'abstract','provider_id':cfg['id']}).json()['job_id']
+    assert client.post(f'/intelligence/jobs/{job}/control',json={'action':'pause'}).status_code==200
+    time.sleep(.4)
+    assert client.get(f'/jobs/{job}').json()['state']=='paused'
+    assert client.post(f'/intelligence/jobs/{job}/control',json={'action':'cancel'}).status_code==200
+    assert client.get(f'/jobs/{job}').json()['state']=='cancelled'
+    assert client.post(f'/intelligence/jobs/{job}/control',json={'action':'resume'}).status_code==200
+    assert wait_job(client,job)['state']=='completed'

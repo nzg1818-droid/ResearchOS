@@ -1,0 +1,462 @@
+{
+  "$defs": {
+    "CharacterizationRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/Value"
+        },
+        "mode": {
+          "$ref": "#/$defs/Value"
+        },
+        "sample_state": {
+          "$ref": "#/$defs/Value"
+        },
+        "finding": {
+          "$ref": "#/$defs/Value"
+        },
+        "mechanism_relevance": {
+          "$ref": "#/$defs/Value"
+        }
+      },
+      "title": "CharacterizationRecord",
+      "type": "object"
+    },
+    "Citation": {
+      "additionalProperties": false,
+      "properties": {
+        "chunk_id": {
+          "title": "Chunk Id",
+          "type": "string"
+        },
+        "quote": {
+          "title": "Quote",
+          "type": "string"
+        },
+        "page": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page"
+        }
+      },
+      "required": [
+        "chunk_id",
+        "quote"
+      ],
+      "title": "Citation",
+      "type": "object"
+    },
+    "ElectrochemistryRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "reaction": {
+          "$ref": "#/$defs/Value"
+        },
+        "cell_type": {
+          "$ref": "#/$defs/Value"
+        },
+        "electrolyte": {
+          "$ref": "#/$defs/Value"
+        },
+        "koh_original": {
+          "$ref": "#/$defs/Value"
+        },
+        "koh_normalized": {
+          "$ref": "#/$defs/Value"
+        },
+        "temperature": {
+          "$ref": "#/$defs/Value"
+        },
+        "pressure": {
+          "$ref": "#/$defs/Value"
+        },
+        "flow": {
+          "$ref": "#/$defs/Value"
+        },
+        "working_electrode": {
+          "$ref": "#/$defs/Value"
+        },
+        "counter_electrode": {
+          "$ref": "#/$defs/Value"
+        },
+        "reference_electrode": {
+          "$ref": "#/$defs/Value"
+        },
+        "reference_conversion": {
+          "$ref": "#/$defs/Value"
+        },
+        "geometric_area": {
+          "$ref": "#/$defs/Value"
+        },
+        "loading": {
+          "$ref": "#/$defs/Value"
+        },
+        "normalization_basis": {
+          "$ref": "#/$defs/Value"
+        },
+        "ir_correction": {
+          "$ref": "#/$defs/Value"
+        },
+        "ir_percentage": {
+          "$ref": "#/$defs/Value"
+        },
+        "ir_method": {
+          "$ref": "#/$defs/Value"
+        },
+        "scan_rate": {
+          "$ref": "#/$defs/Value"
+        },
+        "rotation": {
+          "$ref": "#/$defs/Value"
+        }
+      },
+      "title": "ElectrochemistryRecord",
+      "type": "object"
+    },
+    "MaterialRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "canonical_name": {
+          "$ref": "#/$defs/Value"
+        },
+        "composition": {
+          "$ref": "#/$defs/Value"
+        },
+        "dopants": {
+          "$ref": "#/$defs/Value"
+        },
+        "support": {
+          "$ref": "#/$defs/Value"
+        },
+        "morphology": {
+          "$ref": "#/$defs/Value"
+        },
+        "phase": {
+          "$ref": "#/$defs/Value"
+        },
+        "structural_order": {
+          "$ref": "#/$defs/Value"
+        },
+        "interface": {
+          "$ref": "#/$defs/Value"
+        },
+        "role": {
+          "$ref": "#/$defs/Value"
+        }
+      },
+      "title": "MaterialRecord",
+      "type": "object"
+    },
+    "MechanismRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "claim": {
+          "$ref": "#/$defs/Value"
+        },
+        "evidence_types": {
+          "$ref": "#/$defs/Value"
+        },
+        "supporting_characterization": {
+          "$ref": "#/$defs/Value"
+        },
+        "dft": {
+          "$ref": "#/$defs/Value"
+        },
+        "kinetics": {
+          "$ref": "#/$defs/Value"
+        },
+        "sample_state": {
+          "$ref": "#/$defs/Value"
+        },
+        "limitation": {
+          "$ref": "#/$defs/Value"
+        }
+      },
+      "title": "MechanismRecord",
+      "type": "object"
+    },
+    "PerformanceRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "metric": {
+          "$ref": "#/$defs/Value"
+        },
+        "reported_value": {
+          "$ref": "#/$defs/Value"
+        },
+        "reported_unit": {
+          "$ref": "#/$defs/Value"
+        },
+        "normalized_value": {
+          "$ref": "#/$defs/Value"
+        },
+        "normalized_unit": {
+          "$ref": "#/$defs/Value"
+        },
+        "current_density": {
+          "$ref": "#/$defs/Value"
+        },
+        "potential": {
+          "$ref": "#/$defs/Value"
+        },
+        "overpotential": {
+          "$ref": "#/$defs/Value"
+        },
+        "cell_voltage": {
+          "$ref": "#/$defs/Value"
+        },
+        "duration": {
+          "$ref": "#/$defs/Value"
+        },
+        "product": {
+          "$ref": "#/$defs/Value"
+        },
+        "faradaic_efficiency": {
+          "$ref": "#/$defs/Value"
+        },
+        "selectivity": {
+          "$ref": "#/$defs/Value"
+        },
+        "yield_conversion": {
+          "$ref": "#/$defs/Value"
+        },
+        "tafel_slope": {
+          "$ref": "#/$defs/Value"
+        },
+        "rct": {
+          "$ref": "#/$defs/Value"
+        },
+        "cdl_ecsa": {
+          "$ref": "#/$defs/Value"
+        },
+        "retention": {
+          "$ref": "#/$defs/Value"
+        },
+        "normalization_basis": {
+          "$ref": "#/$defs/Value"
+        },
+        "condition_reference": {
+          "$ref": "#/$defs/Value"
+        }
+      },
+      "title": "PerformanceRecord",
+      "type": "object"
+    },
+    "SynthesisRecord": {
+      "additionalProperties": false,
+      "properties": {
+        "method": {
+          "$ref": "#/$defs/Value"
+        },
+        "precursors": {
+          "$ref": "#/$defs/Value"
+        },
+        "concentrations": {
+          "$ref": "#/$defs/Value"
+        },
+        "solvent": {
+          "$ref": "#/$defs/Value"
+        },
+        "potential": {
+          "$ref": "#/$defs/Value"
+        },
+        "current": {
+          "$ref": "#/$defs/Value"
+        },
+        "current_density": {
+          "$ref": "#/$defs/Value"
+        },
+        "reference_electrode": {
+          "$ref": "#/$defs/Value"
+        },
+        "time": {
+          "$ref": "#/$defs/Value"
+        },
+        "temperature": {
+          "$ref": "#/$defs/Value"
+        },
+        "pressure": {
+          "$ref": "#/$defs/Value"
+        },
+        "atmosphere": {
+          "$ref": "#/$defs/Value"
+        },
+        "ph": {
+          "$ref": "#/$defs/Value"
+        },
+        "annealing": {
+          "$ref": "#/$defs/Value"
+        },
+        "phosphidation": {
+          "$ref": "#/$defs/Value"
+        },
+        "sulfidation": {
+          "$ref": "#/$defs/Value"
+        },
+        "nitridation": {
+          "$ref": "#/$defs/Value"
+        },
+        "scale": {
+          "$ref": "#/$defs/Value"
+        },
+        "notes": {
+          "$ref": "#/$defs/Value"
+        }
+      },
+      "title": "SynthesisRecord",
+      "type": "object"
+    },
+    "Value": {
+      "additionalProperties": false,
+      "properties": {
+        "value": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "number"
+            },
+            {
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Value"
+        },
+        "origin": {
+          "default": "source_reported",
+          "enum": [
+            "source_reported",
+            "app_computed",
+            "ai_interpretation"
+          ],
+          "title": "Origin",
+          "type": "string"
+        },
+        "confidence": {
+          "default": 0.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "evidence": {
+          "items": {
+            "$ref": "#/$defs/Citation"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "formula": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Formula"
+        },
+        "inputs": {
+          "additionalProperties": {
+            "type": "number"
+          },
+          "title": "Inputs",
+          "type": "object"
+        }
+      },
+      "title": "Value",
+      "type": "object"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "one_minute_brief": {
+      "$ref": "#/$defs/Value"
+    },
+    "research_question": {
+      "$ref": "#/$defs/Value"
+    },
+    "study_objective": {
+      "$ref": "#/$defs/Value"
+    },
+    "paper_type": {
+      "$ref": "#/$defs/Value"
+    },
+    "highlights": {
+      "$ref": "#/$defs/Value"
+    },
+    "limitations": {
+      "$ref": "#/$defs/Value"
+    },
+    "unresolved_questions": {
+      "$ref": "#/$defs/Value"
+    },
+    "industrial_relevance": {
+      "$ref": "#/$defs/Value"
+    },
+    "materials": {
+      "items": {
+        "$ref": "#/$defs/MaterialRecord"
+      },
+      "maxItems": 100,
+      "title": "Materials",
+      "type": "array"
+    },
+    "synthesis": {
+      "items": {
+        "$ref": "#/$defs/SynthesisRecord"
+      },
+      "maxItems": 100,
+      "title": "Synthesis",
+      "type": "array"
+    },
+    "characterization": {
+      "items": {
+        "$ref": "#/$defs/CharacterizationRecord"
+      },
+      "maxItems": 100,
+      "title": "Characterization",
+      "type": "array"
+    },
+    "electrochemistry": {
+      "items": {
+        "$ref": "#/$defs/ElectrochemistryRecord"
+      },
+      "maxItems": 100,
+      "title": "Electrochemistry",
+      "type": "array"
+    },
+    "performance": {
+      "items": {
+        "$ref": "#/$defs/PerformanceRecord"
+      },
+      "maxItems": 100,
+      "title": "Performance",
+      "type": "array"
+    },
+    "mechanism": {
+      "items": {
+        "$ref": "#/$defs/MechanismRecord"
+      },
+      "maxItems": 100,
+      "title": "Mechanism",
+      "type": "array"
+    }
+  },
+  "title": "PaperExtraction",
+  "type": "object"
+}

@@ -12,7 +12,7 @@ from .db import Work, File, Annotation, Material, now
 from .phase2_models import ExternalAttachment, SyncState, MaintenanceEvent
 from .storage import Storage
 
-VERSION='0.2.0'
+VERSION='0.3.0'
 def diagnostics(session,root):
     storage=Storage(root);files=session.scalars(select(File)).all();missing=[];corrupt=[]
     for file in files:

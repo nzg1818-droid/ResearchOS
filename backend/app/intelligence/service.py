@@ -21,7 +21,7 @@ def chunks_for(session,doc,section):
 
 def cache_key(doc,config,level):
     settings={k:getattr(config,k) for k in ('provider_type','endpoint','model','max_output_tokens')} if config else {'provider_type':'metadata','model':'deterministic'}
-    return digest(json.dumps([doc.work_id,doc.text_hash,SCHEMA_VERSION,PROMPT_VERSION,settings,level],sort_keys=True))
+    return digest(json.dumps([doc.work_id,doc.source_hash,doc.parser_version,doc.text_hash,SCHEMA_VERSION,PROMPT_VERSION,settings,level],sort_keys=True))
 
 async def extract(session,doc,config,level,consent=False,force=False,transport=None):
     if level=='full_text' and doc.parse_status!='Parsed':raise ValueError(doc.error or 'Full-text extraction needs a parsed text PDF')
